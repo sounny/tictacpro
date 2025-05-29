@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+/* General Body Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa; /* Lighter background */
+    color: #343a40; /* Darker text for better contrast */
+    line-height: 1.7;
+}
+
+/* Header Styles */
+header {
+    background: linear-gradient(90deg, #56ab2f, #a8e063); /* Modern gradient */
+    color: #ffffff;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    border-bottom: none; /* Remove border for a cleaner look */
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.8rem; /* Slightly larger */
+    font-weight: 700; /* Bolder */
+}
+
+header p {
+    margin: 0.5rem 0 0;
+    font-size: 1.3rem; /* Slightly larger */
+    color: #e9ecef; /* Lighter subtitle */
+    font-weight: 300;
+}
+
+/* Main Content Styles */
+main {
+    padding: 1.5rem; /* Adjusted padding */
+    max-width: 1200px;
+    margin: 2.5rem auto; /* Adjusted margin */
+}
+
+.game-cards-container {
+    display: grid; /* Using grid for more control */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
+    gap: 2rem; /* Increased gap */
+    justify-content: center;
+}
+
+/* Game Card Styles */
+.game-card {
+    background-color: #ffffff;
+    border-radius: 12px; /* More rounded corners */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); /* Softer, more diffused shadow */
+    padding: 2rem; /* Increased padding */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.game-card:hover {
+    transform: translateY(-8px); /* More pronounced hover effect */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12); /* Enhanced shadow on hover */
+}
+
+.game-card h2 {
+    margin-top: 1rem;
+    margin-bottom: 0.75rem; /* Adjusted margin */
+    color: #2c3e50; /* Kept color, good contrast */
+    font-size: 1.9rem; /* Slightly larger */
+    font-weight: 600;
+}
+
+.game-card p {
+    font-size: 1rem;
+    color: #555e68; /* Slightly softer text color */
+    margin-bottom: 1.5rem;
+    flex-grow: 1;
+}
+
+.game-preview {
+    width: 80px;
+    height: 80px;
+    background-color: #e9ecef; /* Lighter preview background */
+    border-radius: 12px; /* Match card rounding */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem; /* Increased margin */
+    color: #56ab2f; /* Icon color to match new primary */
+}
+
+.game-preview svg {
+    width: 48px; 
+    height: 48px; 
+}
+
+
+/* Play Button Styles */
+.play-button {
+    display: inline-block;
+    background-color: #56ab2f; /* New primary color */
+    color: #ffffff;
+    padding: 0.85rem 1.8rem; /* Slightly larger padding */
+    text-decoration: none;
+    border-radius: 8px; /* More rounded */
+    font-weight: 600; /* Bolder text */
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.play-button:hover {
+    background-color: #4a9326; /* Darker shade for hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+/* Footer Styles */
+footer {
+    text-align: center;
+    padding: 2rem 1rem; /* Increased padding */
+    background-color: #343a40; /* Darker footer */
+    color: #f8f9fa; /* Light text on dark background */
+    margin-top: 3rem; /* Increased margin */
+}
+
+footer p {
+    margin: 0;
+    font-size: 0.95rem; /* Slightly larger */
+}
+
+footer p a {
+    color: #ffffff; /* White color for the link */
+    text-decoration: none; /* Optional: remove underline */
+}
+
+footer p a:hover {
+    text-decoration: underline; /* Optional: add underline on hover */
+}
+
+/* Responsive adjustments for larger screens */
+/* No changes needed to @media queries for now, grid handles responsiveness well */
+/* @media (min-width: 600px) { ... } */
+/* @media (min-width: 900px) { ... } */
