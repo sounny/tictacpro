@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151; /* gray-700 - Cell's own border */
+            background-color: #1e293b; /* slate-800 - Cell background to match container */
+            transition: background-color 0.3s ease;
+        }
+        .cell:hover {
+            background-color: #334155; /* slate-700 - Lighter for hover */
+        }
+        .cell.x {
+            color: #ef4444; /* red-500 */
+        }
+        .cell.o {
+            color: #3b82f6; /* blue-500 */
+        }
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+            .status {
+                font-size: 1.125rem; /* text-lg */
+            }
+            .mode-button, .reset-button {
+                padding: 0.5rem 1rem; /* py-2 px-4 */
+                font-size: 0.875rem; /* text-sm */
+            }
+        }
+        @media (max-width: 400px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+             .status {
+                font-size: 1rem; /* text-base */
+            }
+        }
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Gravity</h1>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="mode-button bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="mode-button bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-3 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
+                </div>
+
+            <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="reset-button bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset Game</button>
+                 <button id="changeModeButton" class="reset-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Change Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="modal">
+        <div class="modal-content bg-slate-800 text-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+            <p id="modalMessage" class="text-lg mb-4"></p>
+            <button id="modalCloseButton" class="modal-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+
+        // Modal elements
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State Variables
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        // --- Modal Functions ---
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            messageModal.style.display = 'none';
+        }
+
+        modalCloseButton.addEventListener('click', closeModal);
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', (event) => {
+            if (event.target === messageModal) {
+                closeModal();
+            }
+        });
+
+
+        // --- Game Logic Functions ---
+
+        // Function to get the lowest available cell in a column for Gravity mode
+        function getLowestAvailableCell(columnIndex) {
+            const columnIndices = [
+                [6, 3, 0], // Bottom to top for column 0
+                [7, 4, 1], // Bottom to top for column 1
+                [8, 5, 2]  // Bottom to top for column 2
+            ];
+
+            if (columnIndex < 0 || columnIndex > 2) {
+                return -1; // Invalid column
+            }
+
+            for (const index of columnIndices[columnIndex]) {
+                if (board[index] === '') {
+                    return index; // Found an empty cell
+                }
+            }
+            return -1; // Column is full
+        }
+
+        // Function to initialize or reset the game
+        function initializeGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            // currentPlayer = 'X'; // Current player is set when mode is chosen or game is reset
+            gameActive = true;
+            statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+            renderBoard(); // This will now add event listeners correctly after clearing
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Computer's (O) thinking...";
+                toggleBoardInteraction(false);
+                setTimeout(() => {
+                    computerMove();
+                    toggleBoardInteraction(true);
+                }, 700);
+            }
+        }
+
+        // Function to render the board on the UI
+        function renderBoard() {
+            gameBoardElement.innerHTML = ''; // Clear existing board
+            board.forEach((mark, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-md'); // Cells have their own background now
+                if (mark === 'X') cell.classList.add('x');
+                if (mark === 'O') cell.classList.add('o');
+                cell.textContent = mark;
+                cell.dataset.index = index;
+                cell.setAttribute('aria-label', `Cell ${index + 1}, currently ${mark || 'empty'}`);
+                cell.setAttribute('role', 'button');
+                cell.setAttribute('tabindex', '0');
+                // Add event listeners directly here after creation
+                cell.addEventListener('click', handleCellClick);
+                cell.addEventListener('touchend', handleCellClick, { passive: false }); // passive: false for preventDefault
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        // Function to handle a cell click
+        function handleCellClick(event) {
+            event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
+            if (!gameActive) return;
+
+            const clickedCell = event.currentTarget; 
+            const clickedCellIndex = parseInt(clickedCell.dataset.index);
+
+            // Gravity Logic: Determine the actual target cell
+            const columnIndex = clickedCellIndex % 3;
+            const targetIndex = getLowestAvailableCell(columnIndex);
+
+            if (targetIndex === -1) {
+                showModal("This column is full. Please choose another one.");
+                return; // Column is full
+            }
+
+            // Check if the target cell (lowest available) is already somehow filled or game inactive
+            // getLowestAvailableCell should prevent playing in a filled cell if column isn't full.
+            // This check is more for gameActive or if somehow targetIndex is invalidly determined as filled.
+            if (board[targetIndex] !== '' || !gameActive) {
+                // This specific condition (board[targetIndex] !== '') should ideally not be met
+                // if getLowestAvailableCell works correctly and returns an empty cell's index.
+                // It's a safeguard.
+                return; 
+            }
+
+            // Player's move to the targetIndex due to gravity
+            makeMove(targetIndex, currentPlayer);
+
+            if (!gameActive) return; 
+
+            // If PvC mode and it's computer's turn
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                statusElement.textContent = "Computer's (O) thinking...";
+                toggleBoardInteraction(false);
+                setTimeout(() => {
+                    computerMove();
+                    toggleBoardInteraction(true); 
+                }, 700); 
+            }
+        }
+
+        // Function to make a move
+        function makeMove(index, player) {
+            if (board[index] === '' && gameActive) {
+                board[index] = player;
+                const cellElement = gameBoardElement.children[index];
+                cellElement.textContent = player;
+                if (player === 'X') cellElement.classList.add('x');
+                if (player === 'O') cellElement.classList.add('o');
+                cellElement.setAttribute('aria-label', `Cell ${index + 1}, marked as ${player}`);
+
+
+                if (checkWin(player)) {
+                    endGame(false, player);
+                } else if (board.every(cell => cell !== '')) {
+                    endGame(true); // It's a tie
+                } else {
+                    switchPlayer();
+                }
+            }
+        }
+
+        // Function to switch player
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            if (gameActive) {
+                 statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+            }
+        }
+
+        // Function to check for a win
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        // Function for the computer's move (AI)
+        function computerMove() {
+            if (!gameActive) return;
+
+            let bestMove = -1;
+            const computerMark = 'O'; // Assuming computer is 'O' as per classic.html base
+            const playerMark = 'X';
+
+            // 1. Check if computer can win in the next move
+            for (let col = 0; col < 3; col++) {
+                const targetIndex = getLowestAvailableCell(col);
+                if (targetIndex !== -1) {
+                    board[targetIndex] = computerMark;
+                    if (checkWin(computerMark)) {
+                        bestMove = targetIndex;
+                        board[targetIndex] = ''; // Revert test move
+                        break;
+                    }
+                    board[targetIndex] = ''; // Revert test move
+                }
+            }
+
+            // 2. Check if player can win in the next move, and block them
+            if (bestMove === -1) {
+                for (let col = 0; col < 3; col++) {
+                    const targetIndex = getLowestAvailableCell(col);
+                    if (targetIndex !== -1) {
+                        board[targetIndex] = playerMark;
+                        if (checkWin(playerMark)) {
+                            bestMove = targetIndex;
+                            board[targetIndex] = ''; // Revert test move
+                            break;
+                        }
+                        board[targetIndex] = ''; // Revert test move
+                    }
+                }
+            }
+
+            // 3. Try to take the center column (column 1) if available, prioritize actual center cell (4)
+            if (bestMove === -1) {
+                const centerColTargetIndex = getLowestAvailableCell(1); // Column 1
+                if (centerColTargetIndex !== -1) {
+                    if (centerColTargetIndex === 4) { // Actual center of the board
+                        bestMove = 4;
+                    } else {
+                        // If center cell 4 is not the lowest available in col 1,
+                        // still consider playing in col 1 as a general strategy.
+                        bestMove = centerColTargetIndex; 
+                    }
+                }
+            }
+            
+            // 4. If no strategic move, pick a random available column
+            if (bestMove === -1) {
+                let availableColumns = [];
+                for (let col = 0; col < 3; col++) {
+                    if (getLowestAvailableCell(col) !== -1) {
+                        availableColumns.push(col);
+                    }
+                }
+                if (availableColumns.length > 0) {
+                    const randomColumn = availableColumns[Math.floor(Math.random() * availableColumns.length)];
+                    bestMove = getLowestAvailableCell(randomColumn);
+                }
+            }
+
+            if (bestMove !== -1) {
+                makeMove(bestMove, computerMark);
+            } else if (board.every(cell => cell !== '')) {
+                // This case should ideally be caught by win/draw in makeMove
+                endGame(true);
+            }
+        }
+
+        // Function to end the game
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("It's a Tie! Well played by both sides.");
+            } else if (winner) {
+                const winnerName = (gameMode === 'PvC' && winner === 'O') ? "Computer (O)" : `Player ${winner}`;
+                statusElement.textContent = `${winnerName} wins!`;
+                showModal(`${winnerName} is the winner! Congratulations!`);
+
+                winningConditions.forEach(condition => {
+                    if (condition.every(index => board[index] === winner)) {
+                        condition.forEach(index => {
+                            gameBoardElement.children[index].classList.add('bg-yellow-400', 'text-slate-800');
+                        });
+                    }
+                });
+            }
+        }
+        
+        function toggleBoardInteraction(enable) {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                if (enable) {
+                    cell.style.pointerEvents = 'auto';
+                    cell.style.opacity = '1';
+                } else {
+                    cell.style.pointerEvents = 'none';
+                    cell.style.opacity = '0.7';
+                }
+            });
+        }
+
+        // --- Event Listeners Setup ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            currentPlayer = 'X'; // Player X starts in 2P mode
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O'; // Randomly decide who starts
+            initializeGame();
+        });
+
+        resetButton.addEventListener('click', () => {
+            if (gameMode === 'PvC'){
+                currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            } else {
+                currentPlayer = 'X'; 
+            }
+            initializeGame();
+        });
+        
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+            statusElement.textContent = ""; 
+        });
+        
+        gameBoardElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement.classList.contains('cell')) {
+                    handleCellClick({ currentTarget: activeElement, preventDefault: () => {} });
+                }
+            }
+        });
+
+        // Initial setup
+        modeSelectionDiv.classList.remove('hidden');
+        gameAreaDiv.classList.add('hidden');
+
+    </script>
+</body>
+</html>
