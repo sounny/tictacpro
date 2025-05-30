@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe</title>
+    <title>Tic Tac Four</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -11,12 +11,12 @@
             touch-action: manipulation; /* Prevents double-tap zoom on mobile */
         }
         .cell {
-            width: 100px;
-            height: 100px;
+            width: 80px; /* down from 100px */
+            height: 80px; /* down from 100px */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
+            font-size: 2.5rem; /* down from 3rem */
             font-weight: bold;
             cursor: pointer;
             border: 2px solid #374151; /* gray-700 - Cell's own border */
@@ -35,9 +35,9 @@
         /* Responsive adjustments */
         @media (max-width: 600px) {
             .cell {
-                width: 80px;
-                height: 80px;
-                font-size: 2.5rem;
+                width: 60px; /* down from 80px */
+                height: 60px; /* down from 80px */
+                font-size: 2rem; /* down from 2.5rem */
             }
             .status {
                 font-size: 1.125rem; /* text-lg */
@@ -49,9 +49,9 @@
         }
         @media (max-width: 400px) {
             .cell {
-                width: 70px;
-                height: 70px;
-                font-size: 2rem;
+                width: 50px; /* down from 70px */
+                height: 50px; /* down from 70px */
+                font-size: 1.75rem; /* down from 2rem */
             }
              .status {
                 font-size: 1rem; /* text-base */
@@ -90,7 +90,7 @@
 <body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Gravity</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Four</h1>
 
         <div id="modeSelection" class="mb-6 text-center">
             <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
@@ -101,7 +101,7 @@
         </div>
 
         <div id="gameArea" class="hidden">
-            <div id="gameBoard" class="grid grid-cols-3 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
+            <div id="gameBoard" class="grid grid-cols-4 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
                 </div>
 
             <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
@@ -137,15 +137,18 @@
         const modalCloseButton = document.getElementById('modalCloseButton');
 
         // Game State Variables
-        let board = ['', '', '', '', '', '', '', '', ''];
+        let board = Array(16).fill(''); // Updated for 4x4 grid
         let currentPlayer = 'X';
         let gameActive = true;
         let gameMode = ''; // '2P' or 'PvC'
 
         const winningConditions = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-            [0, 4, 8], [2, 4, 6]             // Diagonals
+            // Rows (4)
+            [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
+            // Columns (4)
+            [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15],
+            // Diagonals (2)
+            [0, 5, 10, 15], [3, 6, 9, 12]
         ];
 
         // --- Modal Functions ---
@@ -169,29 +172,9 @@
 
         // --- Game Logic Functions ---
 
-        // Function to get the lowest available cell in a column for Gravity mode
-        function getLowestAvailableCell(columnIndex) {
-            const columnIndices = [
-                [6, 3, 0], // Bottom to top for column 0
-                [7, 4, 1], // Bottom to top for column 1
-                [8, 5, 2]  // Bottom to top for column 2
-            ];
-
-            if (columnIndex < 0 || columnIndex > 2) {
-                return -1; // Invalid column
-            }
-
-            for (const index of columnIndices[columnIndex]) {
-                if (board[index] === '') {
-                    return index; // Found an empty cell
-                }
-            }
-            return -1; // Column is full
-        }
-
         // Function to initialize or reset the game
         function initializeGame() {
-            board = ['', '', '', '', '', '', '', '', ''];
+            board = Array(16).fill(''); // Updated for 4x4 grid
             // currentPlayer = 'X'; // Current player is set when mode is chosen or game is reset
             gameActive = true;
             statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
@@ -210,21 +193,24 @@
         // Function to render the board on the UI
         function renderBoard() {
             gameBoardElement.innerHTML = ''; // Clear existing board
-            board.forEach((mark, index) => {
+            for (let i = 0; i < 16; i++) { // Loop 16 times for a 4x4 grid
                 const cell = document.createElement('div');
-                cell.classList.add('cell', 'rounded-md'); // Cells have their own background now
+                cell.classList.add('cell', 'rounded-md');
+
+                const mark = board[i]; // Use the actual board mark
+
                 if (mark === 'X') cell.classList.add('x');
                 if (mark === 'O') cell.classList.add('o');
                 cell.textContent = mark;
-                cell.dataset.index = index;
-                cell.setAttribute('aria-label', `Cell ${index + 1}, currently ${mark || 'empty'}`);
+                cell.dataset.index = i;
+                cell.setAttribute('aria-label', `Cell ${i + 1}, currently ${mark || 'empty'}`);
                 cell.setAttribute('role', 'button');
                 cell.setAttribute('tabindex', '0');
-                // Add event listeners directly here after creation
+
                 cell.addEventListener('click', handleCellClick);
-                cell.addEventListener('touchend', handleCellClick, { passive: false }); // passive: false for preventDefault
+                cell.addEventListener('touchend', handleCellClick, { passive: false });
                 gameBoardElement.appendChild(cell);
-            });
+            }
         }
 
         // Function to handle a cell click
@@ -232,32 +218,17 @@
             event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
             if (!gameActive) return;
 
-            const clickedCell = event.currentTarget;
+            const clickedCell = event.currentTarget; // Use currentTarget for dynamically added listeners
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
-            // Gravity Logic: Determine the actual target cell
-            const columnIndex = clickedCellIndex % 3;
-            const targetIndex = getLowestAvailableCell(columnIndex);
-
-            if (targetIndex === -1) {
-                showModal("This column is full. Please choose another one.");
-                return; // Column is full
+            if (board[clickedCellIndex] !== '' || !gameActive) {
+                return; // Cell already played or game over
             }
 
-            // Check if the target cell (lowest available) is already somehow filled or game inactive
-            // getLowestAvailableCell should prevent playing in a filled cell if column isn't full.
-            // This check is more for gameActive or if somehow targetIndex is invalidly determined as filled.
-            if (board[targetIndex] !== '' || !gameActive) {
-                // This specific condition (board[targetIndex] !== '') should ideally not be met
-                // if getLowestAvailableCell works correctly and returns an empty cell's index.
-                // It's a safeguard.
-                return;
-            }
+            // Player's move
+            makeMove(clickedCellIndex, currentPlayer);
 
-            // Player's move to the targetIndex due to gravity
-            makeMove(targetIndex, currentPlayer);
-
-            if (!gameActive) return;
+            if (!gameActive) return; // Game ended after player's move
 
             // If PvC mode and it's computer's turn
             if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
@@ -309,74 +280,78 @@
         // Function for the computer's move (AI)
         function computerMove() {
             if (!gameActive) return;
-
             let bestMove = -1;
-            const computerMark = 'O'; // Assuming computer is 'O' as per classic.html base
-            const playerMark = 'X';
+            const computer = 'O'; // Assuming computer is 'O'
+            const player = 'X';
 
-            // 1. Check if computer can win in the next move
-            for (let col = 0; col < 3; col++) {
-                const targetIndex = getLowestAvailableCell(col);
-                if (targetIndex !== -1) {
-                    board[targetIndex] = computerMark;
-                    if (checkWin(computerMark)) {
-                        bestMove = targetIndex;
-                        board[targetIndex] = ''; // Revert test move
+            // Helper to check if a condition can be won/blocked
+            function checkPotentialLine(markToCheck, condition) {
+                let marksInLine = 0;
+                let emptySpot = -1;
+                for (const index of condition) {
+                    if (board[index] === markToCheck) {
+                        marksInLine++;
+                    } else if (board[index] === '') {
+                        emptySpot = index;
+                    } else { // Opponent's mark is in the way or cell is taken by non-relevant player mark
+                        return -1;
+                    }
+                }
+                if (marksInLine === 3 && emptySpot !== -1) { // Need 3 marks for a line of 4
+                    return emptySpot; // Return the winning/blocking spot
+                }
+                return -1;
+            }
+
+            // 1. Check if computer can win
+            for (const condition of winningConditions) {
+                const winMove = checkPotentialLine(computer, condition);
+                if (winMove !== -1) {
+                    bestMove = winMove;
+                    break;
+                }
+            }
+
+            // 2. Check if player can win (and block them)
+            if (bestMove === -1) {
+                for (const condition of winningConditions) {
+                    const blockMove = checkPotentialLine(player, condition);
+                    if (blockMove !== -1) {
+                        bestMove = blockMove;
                         break;
                     }
-                    board[targetIndex] = ''; // Revert test move
                 }
             }
 
-            // 2. Check if player can win in the next move, and block them
+            // 3. Try to take strategic center-ish spots (simplified for 4x4)
             if (bestMove === -1) {
-                for (let col = 0; col < 3; col++) {
-                    const targetIndex = getLowestAvailableCell(col);
-                    if (targetIndex !== -1) {
-                        board[targetIndex] = playerMark;
-                        if (checkWin(playerMark)) {
-                            bestMove = targetIndex;
-                            board[targetIndex] = ''; // Revert test move
-                            break;
-                        }
-                        board[targetIndex] = ''; // Revert test move
+                const centerSpots = [5, 6, 9, 10]; // Inner 2x2 square
+                const shuffledCenterSpots = centerSpots.sort(() => 0.5 - Math.random()); // Shuffle for variety
+                for (const spot of shuffledCenterSpots) {
+                    if (board[spot] === '') {
+                        bestMove = spot;
+                        break;
                     }
                 }
             }
 
-            // 3. Try to take the center column (column 1) if available, prioritize actual center cell (4)
+            // 4. Fallback to a random available move
             if (bestMove === -1) {
-                const centerColTargetIndex = getLowestAvailableCell(1); // Column 1
-                if (centerColTargetIndex !== -1) {
-                    if (centerColTargetIndex === 4) { // Actual center of the board
-                        bestMove = 4;
-                    } else {
-                        // If center cell 4 is not the lowest available in col 1,
-                        // still consider playing in col 1 as a general strategy.
-                        bestMove = centerColTargetIndex;
+                const availableMoves = [];
+                for (let i = 0; i < 16; i++) { // Iterate through all 16 cells
+                    if (board[i] === '') {
+                        availableMoves.push(i);
                     }
                 }
-            }
-
-            // 4. If no strategic move, pick a random available column
-            if (bestMove === -1) {
-                let availableColumns = [];
-                for (let col = 0; col < 3; col++) {
-                    if (getLowestAvailableCell(col) !== -1) {
-                        availableColumns.push(col);
-                    }
-                }
-                if (availableColumns.length > 0) {
-                    const randomColumn = availableColumns[Math.floor(Math.random() * availableColumns.length)];
-                    bestMove = getLowestAvailableCell(randomColumn);
+                if (availableMoves.length > 0) {
+                    bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
                 }
             }
 
             if (bestMove !== -1) {
-                makeMove(bestMove, computerMark);
+                makeMove(bestMove, computer);
             } else if (board.every(cell => cell !== '')) {
-                // This case should ideally be caught by win/draw in makeMove
-                endGame(true);
+                endGame(true); // Tie
             }
         }
 

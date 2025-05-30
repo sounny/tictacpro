@@ -252,17 +252,17 @@
             event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
             if (!gameActive) return;
 
-            const clickedCell = event.currentTarget; 
+            const clickedCell = event.currentTarget;
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
             // Check directly if the clicked cell is empty and game is active
             if (board[clickedCellIndex] !== '' || !gameActive) {
-                return; 
+                return;
             }
 
             makeMove(clickedCellIndex, currentPlayer);
 
-            if (!gameActive) return; 
+            if (!gameActive) return;
 
             // If PvC mode and it's computer's turn
             if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
@@ -270,8 +270,8 @@
                 toggleBoardInteraction(false);
                 setTimeout(() => {
                     computerMove();
-                    toggleBoardInteraction(true); 
-                }, 700); 
+                    toggleBoardInteraction(true);
+                }, 700);
             }
         }
 
@@ -279,12 +279,12 @@
         function makeMove(index, player) {
             // The initial check (board[index] === '' && gameActive) is done by handleCellClick
             board[index] = player;
-            
+
             // Update the specific cell UI immediately for player's placed piece
             const cellElement = gameBoardElement.children[index];
             cellElement.textContent = player;
             // Ensure classes are fresh
-            cellElement.classList.remove('x', 'o'); 
+            cellElement.classList.remove('x', 'o');
             if (player === 'X') {
                 cellElement.classList.add('x');
             } else {
@@ -328,13 +328,13 @@
             // 1. Check if computer can win in the next move
             for (let i = 0; i < board.length; i++) {
                 if (board[i] === '') {
-                    board[i] = 'O'; 
+                    board[i] = 'O';
                     if (checkWin('O')) {
                         bestMove = i;
-                        board[i] = ''; 
+                        board[i] = '';
                         break;
                     }
-                    board[i] = ''; 
+                    board[i] = '';
                 }
             }
 
@@ -342,13 +342,13 @@
             if (bestMove === -1) {
                 for (let i = 0; i < board.length; i++) {
                     if (board[i] === '') {
-                        board[i] = 'X'; 
+                        board[i] = 'X';
                         if (checkWin('X')) {
                             bestMove = i;
-                            board[i] = ''; 
+                            board[i] = '';
                             break;
                         }
-                        board[i] = ''; 
+                        board[i] = '';
                     }
                 }
             }
@@ -374,11 +374,11 @@
                     bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
                 }
             }
-            
+
             if (bestMove !== -1) {
                  makeMove(bestMove, 'O');
-            } else if (board.every(cell => cell !== '')) { 
-                endGame(true); 
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true);
             }
         }
 
@@ -402,7 +402,7 @@
                 });
             }
         }
-        
+
         function toggleBoardInteraction(enable) {
             const cells = document.querySelectorAll('.cell');
             cells.forEach(cell => {
@@ -437,17 +437,17 @@
             if (gameMode === 'PvC'){
                 currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
             } else {
-                currentPlayer = 'X'; 
+                currentPlayer = 'X';
             }
             initializeGame();
         });
-        
+
         changeModeButton.addEventListener('click', () => {
             gameAreaDiv.classList.add('hidden');
             modeSelectionDiv.classList.remove('hidden');
-            statusElement.textContent = ""; 
+            statusElement.textContent = "";
         });
-        
+
         gameBoardElement.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 const activeElement = document.activeElement;

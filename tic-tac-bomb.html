@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe</title>
+    <title>Tic Tac Bomb</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -90,7 +90,7 @@
 <body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Gravity</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Bomb</h1>
 
         <div id="modeSelection" class="mb-6 text-center">
             <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
@@ -108,6 +108,7 @@
 
             <div class="flex justify-center space-x-3 mt-4">
                  <button id="resetButton" class="reset-button bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset Game</button>
+                 <button id="bombButton" class="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105" style="display: none;">Use Bomb</button>
                  <button id="changeModeButton" class="reset-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Change Mode</button>
             </div>
         </div>
@@ -141,6 +142,9 @@
         let currentPlayer = 'X';
         let gameActive = true;
         let gameMode = ''; // '2P' or 'PvC'
+        let playerBombUsed = { 'X': false, 'O': false };
+        let bombModeActive = false;
+        const bombButton = document.getElementById('bombButton');
 
         const winningConditions = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -169,33 +173,69 @@
 
         // --- Game Logic Functions ---
 
-        // Function to get the lowest available cell in a column for Gravity mode
-        function getLowestAvailableCell(columnIndex) {
-            const columnIndices = [
-                [6, 3, 0], // Bottom to top for column 0
-                [7, 4, 1], // Bottom to top for column 1
-                [8, 5, 2]  // Bottom to top for column 2
-            ];
+        function updateBombButtonVisibility() {
+            if (!bombButton) return;
+            // Assuming computer is 'O' for PvC, or use computerPlayerMark if available from other features
+            const isComputerTurn = gameMode === 'PvC' && currentPlayer === 'O';
 
-            if (columnIndex < 0 || columnIndex > 2) {
-                return -1; // Invalid column
+            if (isComputerTurn && gameActive) {
+                bombButton.style.display = 'none';
+                return;
             }
 
-            for (const index of columnIndices[columnIndex]) {
-                if (board[index] === '') {
-                    return index; // Found an empty cell
+            if (gameActive && !playerBombUsed[currentPlayer]) {
+                bombButton.style.display = 'inline-block';
+                bombButton.disabled = false;
+                bombButton.textContent = bombModeActive ? 'Cancel Bomb' : 'Use Bomb';
+            } else {
+                bombButton.style.display = 'none';
+                bombButton.disabled = true;
+            }
+        }
+
+        function activateBombMode() {
+            if (playerBombUsed[currentPlayer] || !gameActive) {
+                showModal("Bomb already used or game not active!");
+                return;
+            }
+            bombModeActive = !bombModeActive; // Toggle
+            if (bombModeActive) {
+                statusElement.textContent = `Player ${currentPlayer}: Bomb mode activated! Click cell to detonate.`;
+            } else {
+                statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+            }
+            updateBombButtonVisibility();
+        }
+        if (bombButton) bombButton.addEventListener('click', activateBombMode);
+
+
+        function detonateBomb(targetIndex) {
+            const row = Math.floor(targetIndex / 3);
+            const col = targetIndex % 3;
+
+            for (let r_offset = -1; r_offset <= 1; r_offset++) {
+                for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                    const affectedRow = row + r_offset;
+                    const affectedCol = col + c_offset;
+
+                    if (affectedRow >= 0 && affectedRow < 3 && affectedCol >= 0 && affectedCol < 3) {
+                        const cellIndex = affectedRow * 3 + affectedCol;
+                        board[cellIndex] = '';
+                    }
                 }
             }
-            return -1; // Column is full
         }
+
 
         // Function to initialize or reset the game
         function initializeGame() {
             board = ['', '', '', '', '', '', '', '', ''];
-            // currentPlayer = 'X'; // Current player is set when mode is chosen or game is reset
             gameActive = true;
+            playerBombUsed = { 'X': false, 'O': false };
+            bombModeActive = false;
+            // currentPlayer = 'X'; // Reset based on mode later
             statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
-            renderBoard(); // This will now add event listeners correctly after clearing
+            renderBoard();
 
             if (gameMode === 'PvC' && currentPlayer === 'O') {
                 statusElement.textContent = "Computer's (O) thinking...";
@@ -205,6 +245,7 @@
                     toggleBoardInteraction(true);
                 }, 700);
             }
+            updateBombButtonVisibility();
         }
 
         // Function to render the board on the UI
@@ -235,27 +276,59 @@
             const clickedCell = event.currentTarget;
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
-            // Gravity Logic: Determine the actual target cell
-            const columnIndex = clickedCellIndex % 3;
-            const targetIndex = getLowestAvailableCell(columnIndex);
+            if (bombModeActive) {
+                if (playerBombUsed[currentPlayer]) return; // Should be handled by button state
 
-            if (targetIndex === -1) {
-                showModal("This column is full. Please choose another one.");
-                return; // Column is full
+                detonateBomb(clickedCellIndex);
+                playerBombUsed[currentPlayer] = true;
+                bombModeActive = false;
+                renderBoard();
+                statusElement.textContent = `Player ${currentPlayer} detonated a bomb!`;
+
+                // Check for win/draw AFTER bomb detonation and render
+                // A bomb clearing the board might lead to a draw if no one can win
+                // Or it might reveal a win if the bomb cleared opponent's pieces that were blocking.
+                // For simplicity, a bomb detonation itself doesn't check for win for the current player.
+                // It just clears pieces. The game continues or ends by subsequent moves.
+                // However, it's possible a bomb clears pieces such that the *other* player now has a win.
+                // Or it results in a draw (e.g. too few pieces to win).
+                // Current classic logic: win is checked for player whose turn it *was*.
+                // Bomb simply ends current player's turn.
+
+                // A bomb doesn't directly cause a win for the bomber.
+                // It's a board clearing action. Let's check if the board is now empty (draw).
+                if (board.every(cell => cell === '')) {
+                     // No immediate win check for bomber, but check if board is now empty or unwinable
+                    let xCount = board.filter(m => m === 'X').length;
+                    let oCount = board.filter(m => m === 'O').length;
+                    if (xCount < 3 && oCount < 3 && (xCount + oCount < 5) ) { // Heuristic for unwinnable
+                         // No standard win check here, rely on next player's move or game state
+                    }
+                }
+                // It's important that switchPlayer is called to pass the turn.
+                switchPlayer(); // This will also update bomb button for the next player.
+                updateBombButtonVisibility(); // Explicitly update after state changes.
+                toggleBoardInteraction(true); // Ensure board is interactive for next player.
+
+                // FIX: Check if it's computer's turn NOW and trigger its move.
+                if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) { // Assuming computer is 'O'
+                    statusElement.textContent = "Computer's (O) thinking...";
+                    toggleBoardInteraction(false);
+                    setTimeout(() => {
+                        computerMove();
+                        // computerMove will call makeMove -> switchPlayer -> updateBombButtonVisibility
+                        // It will also call renderBoard.
+                        toggleBoardInteraction(true);
+                    }, 700);
+                }
+                return; // End of bomb turn
             }
 
-            // Check if the target cell (lowest available) is already somehow filled or game inactive
-            // getLowestAvailableCell should prevent playing in a filled cell if column isn't full.
-            // This check is more for gameActive or if somehow targetIndex is invalidly determined as filled.
-            if (board[targetIndex] !== '' || !gameActive) {
-                // This specific condition (board[targetIndex] !== '') should ideally not be met
-                // if getLowestAvailableCell works correctly and returns an empty cell's index.
-                // It's a safeguard.
+            // Normal move logic:
+            if (board[clickedCellIndex] !== '' || !gameActive) {
                 return;
             }
-
-            // Player's move to the targetIndex due to gravity
-            makeMove(targetIndex, currentPlayer);
+            makeMove(clickedCellIndex, currentPlayer);
 
             if (!gameActive) return;
 
@@ -297,6 +370,7 @@
             if (gameActive) {
                  statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
             }
+            updateBombButtonVisibility(); // Update for new player
         }
 
         // Function to check for a win
@@ -311,71 +385,60 @@
             if (!gameActive) return;
 
             let bestMove = -1;
-            const computerMark = 'O'; // Assuming computer is 'O' as per classic.html base
-            const playerMark = 'X';
 
             // 1. Check if computer can win in the next move
-            for (let col = 0; col < 3; col++) {
-                const targetIndex = getLowestAvailableCell(col);
-                if (targetIndex !== -1) {
-                    board[targetIndex] = computerMark;
-                    if (checkWin(computerMark)) {
-                        bestMove = targetIndex;
-                        board[targetIndex] = ''; // Revert test move
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin('O')) {
+                        bestMove = i;
+                        board[i] = '';
                         break;
                     }
-                    board[targetIndex] = ''; // Revert test move
+                    board[i] = '';
                 }
             }
 
             // 2. Check if player can win in the next move, and block them
             if (bestMove === -1) {
-                for (let col = 0; col < 3; col++) {
-                    const targetIndex = getLowestAvailableCell(col);
-                    if (targetIndex !== -1) {
-                        board[targetIndex] = playerMark;
-                        if (checkWin(playerMark)) {
-                            bestMove = targetIndex;
-                            board[targetIndex] = ''; // Revert test move
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        if (checkWin('X')) {
+                            bestMove = i;
+                            board[i] = '';
                             break;
                         }
-                        board[targetIndex] = ''; // Revert test move
+                        board[i] = '';
                     }
                 }
             }
 
-            // 3. Try to take the center column (column 1) if available, prioritize actual center cell (4)
+            // 3. Try to take the center if available
+            if (bestMove === -1 && board[4] === '') {
+                bestMove = 4;
+            }
+
+            // 4. Try to take a corner if available
             if (bestMove === -1) {
-                const centerColTargetIndex = getLowestAvailableCell(1); // Column 1
-                if (centerColTargetIndex !== -1) {
-                    if (centerColTargetIndex === 4) { // Actual center of the board
-                        bestMove = 4;
-                    } else {
-                        // If center cell 4 is not the lowest available in col 1,
-                        // still consider playing in col 1 as a general strategy.
-                        bestMove = centerColTargetIndex;
-                    }
+                const corners = [0, 2, 6, 8];
+                const availableCorners = corners.filter(index => board[index] === '');
+                if (availableCorners.length > 0) {
+                    bestMove = availableCorners[Math.floor(Math.random() * availableCorners.length)];
                 }
             }
 
-            // 4. If no strategic move, pick a random available column
+            // 5. Try to take a side if available (or any remaining spot)
             if (bestMove === -1) {
-                let availableColumns = [];
-                for (let col = 0; col < 3; col++) {
-                    if (getLowestAvailableCell(col) !== -1) {
-                        availableColumns.push(col);
-                    }
-                }
-                if (availableColumns.length > 0) {
-                    const randomColumn = availableColumns[Math.floor(Math.random() * availableColumns.length)];
-                    bestMove = getLowestAvailableCell(randomColumn);
+                const availableMoves = board.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+                if (availableMoves.length > 0) {
+                    bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
                 }
             }
 
             if (bestMove !== -1) {
-                makeMove(bestMove, computerMark);
+                 makeMove(bestMove, 'O');
             } else if (board.every(cell => cell !== '')) {
-                // This case should ideally be caught by win/draw in makeMove
                 endGame(true);
             }
         }
@@ -383,6 +446,11 @@
         // Function to end the game
         function endGame(isTie, winner = null) {
             gameActive = false;
+            bombModeActive = false; // Ensure bomb mode is off
+            if (bombButton) { // Hide and disable bomb button on game end
+                bombButton.style.display = 'none';
+                bombButton.disabled = true;
+            }
             if (isTie) {
                 statusElement.textContent = "It's a Tie!";
                 showModal("It's a Tie! Well played by both sides.");
