@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe: Gravity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Applying the Inter font globally */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom class for player X symbol if needed, Tailwind handles colors well */
+        .player-x {
+            /* color: #FF6B6B; Example custom color */
+        }
+        /* Custom class for player O symbol if needed */
+        .player-o {
+            /* color: #4ECDC4; Example custom color */
+        }
+        /* Ensure modal is above everything */
+        #messageModal {
+            z-index: 100;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4 selection:bg-cyan-500 selection:text-white">
+
+    <div class="text-center">
+        <h1 class="text-4xl sm:text-5xl font-bold mb-2 text-cyan-400">Tic-Tac-Toe: Gravity</h1>
+        <p class="mb-6 text-slate-400 text-sm sm:text-base max-w-md">
+            Choose a column and drop your mark. It will fall to the lowest available spot. Get three in a row to win!
+        </p>
+    </div>
+
+    <div id="statusArea" class="mb-5 text-xl sm:text-2xl h-8 font-semibold text-slate-300">Player X's turn</div>
+
+    <div id="gameBoard" class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+        </div>
+
+    <button id="resetButton" class="px-7 py-3 bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-800 rounded-lg text-lg font-semibold transition-all duration-150 ease-in-out shadow-md hover:shadow-lg active:scale-95">
+        Reset Game
+    </button>
+
+    <div id="messageModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 p-6 sm:p-8 rounded-xl shadow-2xl text-center max-w-xs sm:max-w-sm w-full transform transition-all duration-300 ease-out scale-95 opacity-0" id="modalDialog">
+            <p id="modalMessageText" class="text-xl sm:text-2xl mb-6 font-medium text-slate-100"></p>
+            <button id="modalCloseButton" class="w-full px-6 py-3 bg-cyan-500 hover:bg-cyan-600 focus:outline-none focus:ring-4 focus:ring-cyan-700 rounded-lg text-lg font-semibold transition-colors duration-150 ease-in-out shadow-md hover:shadow-lg active:scale-95">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const boardElement = document.getElementById('gameBoard');
+        const statusArea = document.getElementById('statusArea');
+        const resetButton = document.getElementById('resetButton');
+        const messageModal = document.getElementById('messageModal');
+        const modalDialog = document.getElementById('modalDialog');
+        const modalMessageText = document.getElementById('modalMessageText');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State Variables
+        let board = ['', '', '', '', '', '', '', '', '']; // Represents the 3x3 grid
+        let currentPlayer = 'X'; // 'X' starts the game
+        let gameActive = true; // Becomes false when game ends
+        // Winning combinations (indices of the board array)
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        /**
+         * Initializes and creates the game board cells.
+         */
+        function createBoard() {
+            boardElement.innerHTML = ''; // Clear previous board if any
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                // Tailwind classes for cell styling
+                cell.classList.add(
+                    'w-20', 'h-20', 'sm:w-24', 'sm:h-24', 'md:w-28', 'md:h-28', // Responsive sizing
+                    'bg-slate-800', 'rounded-lg', 
+                    'flex', 'items-center', 'justify-center', 
+                    'text-4xl', 'sm:text-5xl', 'md:text-6xl', 'font-bold', 
+                    'cursor-pointer', 'hover:bg-slate-700', 
+                    'transition-all', 'duration-150', 'ease-in-out'
+                );
+                cell.dataset.index = i; // Store cell index
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        /**
+         * Handles a click event on a game cell.
+         * @param {Event} event - The click event.
+         */
+        function handleCellClick(event) {
+            const clickedCell = event.target;
+            const clickedCellIndex = parseInt(clickedCell.dataset.index);
+
+            // If game is not active, do nothing
+            if (!gameActive) {
+                return;
+            }
+
+            // Implement Gravity Drop
+            const column = clickedCellIndex % 3;
+            let targetIndex = -1;
+
+            // Find the lowest available cell in the column
+            for (let i = 2; i >= 0; i--) { // Iterate rows from bottom (2) to top (0)
+                const potentialIndex = column + (i * 3);
+                if (board[potentialIndex] === '') {
+                    targetIndex = potentialIndex;
+                    break;
+                }
+            }
+
+            // If column is full or move is invalid
+            if (targetIndex === -1) {
+                // Optionally: statusArea.textContent = "Column full!"; setTimeout(() => statusArea.textContent = `Player ${currentPlayer}'s turn`, 1000);
+                return; 
+            }
+            
+            // If cell is already filled (this check is now for the target cell after gravity)
+            if (board[targetIndex] !== '') {
+                return;
+            }
+
+            const targetCellElement = boardElement.children[targetIndex];
+
+            // Place the current player's piece
+            board[targetIndex] = currentPlayer;
+            targetCellElement.textContent = currentPlayer;
+            targetCellElement.classList.add(currentPlayer === 'X' ? 'text-pink-400' : 'text-sky-400');
+            targetCellElement.classList.remove('hover:bg-slate-700'); // Disable hover on filled cell
+            targetCellElement.style.cursor = 'default'; // Change cursor for filled cell
+            
+            // Check for a win
+            if (checkWin()) {
+                endGame(false); // false indicates not a draw
+                return;
+            }
+
+            // Check for a draw (all cells filled, no winner)
+            // This is less likely with the decay mechanic but still possible.
+            if (board.every(cell => cell !== '')) {
+                endGame(true); // true indicates a draw
+                return;
+            }
+
+            // Switch player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusArea.textContent = `Player ${currentPlayer}'s turn`;
+        }
+
+        /**
+         * Checks if the current player has won.
+         * @returns {boolean} True if current player wins, false otherwise.
+         */
+        function checkWin() {
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (board[a] && board[a] === board[b] && board[a] === board[c] && board[a] !== '') {
+                    // Highlight winning cells
+                    [a, b, c].forEach(index => {
+                        const cell = boardElement.children[index];
+                        cell.classList.add('bg-emerald-600', 'animate-pulse');
+                        cell.classList.remove('bg-slate-800', 'hover:bg-slate-700');
+                    });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Ends the game, displaying a win or draw message.
+         * @param {boolean} isDraw - True if the game is a draw.
+         */
+        function endGame(isDraw) {
+            gameActive = false;
+            if (isDraw) {
+                showModalMessage("It's a Draw!");
+                statusArea.textContent = "Game Over: Draw!";
+            } else {
+                showModalMessage(`Player ${currentPlayer} Wins!`);
+                statusArea.textContent = `Game Over: Player ${currentPlayer} Wins!`;
+            }
+        }
+
+        /**
+         * Resets the game to its initial state.
+         */
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            statusArea.textContent = `Player ${currentPlayer}'s turn`;
+            
+            // Clear board UI and reset cell styles
+            Array.from(boardElement.children).forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('text-pink-400', 'text-sky-400', 'bg-emerald-600', 'animate-pulse');
+                cell.classList.add('bg-slate-800', 'hover:bg-slate-700');
+                cell.style.cursor = 'pointer';
+            });
+            hideModalMessage();
+            // Optionally, could call createBoard() again if cells were removed/added dynamically,
+            // but for this setup, clearing content and styles is sufficient.
+        }
+
+        /**
+         * Shows the modal with a specific message.
+         * @param {string} message - The message to display in the modal.
+         */
+        function showModalMessage(message) {
+            modalMessageText.textContent = message;
+            messageModal.classList.remove('hidden');
+            messageModal.classList.add('flex'); // Use flex to center
+            // Trigger reflow for transition
+            void modalDialog.offsetWidth; 
+            modalDialog.classList.remove('scale-95', 'opacity-0');
+            modalDialog.classList.add('scale-100', 'opacity-100');
+        }
+
+        /**
+         * Hides the modal message.
+         */
+        function hideModalMessage() {
+            modalDialog.classList.add('scale-95', 'opacity-0');
+            modalDialog.classList.remove('scale-100', 'opacity-100');
+            // Wait for transition to finish before hiding
+            setTimeout(() => {
+                messageModal.classList.add('hidden');
+                messageModal.classList.remove('flex');
+            }, 300); // Match transition duration
+        }
+
+        // Event Listeners
+        resetButton.addEventListener('click', resetGame);
+        modalCloseButton.addEventListener('click', () => {
+            // When modal "Play Again" is clicked, hide modal and reset game
+            hideModalMessage();
+            resetGame(); 
+        });
+
+        // Initial game setup when the script runs
+        createBoard();
+        statusArea.textContent = `Player ${currentPlayer}'s turn`; // Initial status
+
+    </script>
+</body>
+</html>
