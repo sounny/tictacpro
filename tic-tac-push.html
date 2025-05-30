@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Classic</title>
+    <title>Tic Tac Toe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -90,7 +90,7 @@
 <body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Classic</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Push</h1>
 
         <div id="modeSelection" class="mb-6 text-center">
             <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
@@ -169,6 +169,46 @@
 
         // --- Game Logic Functions ---
 
+        function isValidIndex(index) {
+            return index >= 0 && index < 9;
+        }
+
+        function applyPush(placedIndex, player) {
+            const opponent = player === 'X' ? 'O' : 'X';
+            const directions = [
+                { name: 'up', change: -3, rowChange: -1, colChange: 0 },
+                { name: 'down', change: 3, rowChange: 1, colChange: 0 },
+                { name: 'left', change: -1, rowChange: 0, colChange: -1 },
+                { name: 'right', change: 1, rowChange: 0, colChange: 1 }
+            ];
+
+            const placedRow = Math.floor(placedIndex / 3);
+            const placedCol = placedIndex % 3;
+
+            for (const direction of directions) {
+                const adjRow = placedRow + direction.rowChange;
+                const adjCol = placedCol + direction.colChange;
+
+                // Check if adjacent cell is within board boundaries
+                if (adjRow >= 0 && adjRow < 3 && adjCol >= 0 && adjCol < 3) {
+                    const adjIndex = placedIndex + direction.change; // Calculate adjIndex only if adjRow/Col are valid
+                    if (isValidIndex(adjIndex) && board[adjIndex] === opponent) {
+                        const pushToRow = adjRow + direction.rowChange;
+                        const pushToCol = adjCol + direction.colChange;
+
+                        // Check if the push-to cell is within board boundaries
+                        if (pushToRow >= 0 && pushToRow < 3 && pushToCol >= 0 && pushToCol < 3) {
+                            const pushToIndex = adjIndex + direction.change;
+                            if (isValidIndex(pushToIndex) && board[pushToIndex] === '') {
+                                board[pushToIndex] = board[adjIndex]; // Push opponent's piece
+                                board[adjIndex] = ''; // Clear opponent's original spot
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Function to initialize or reset the game
         function initializeGame() {
             board = ['', '', '', '', '', '', '', '', ''];
@@ -212,17 +252,17 @@
             event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
             if (!gameActive) return;
 
-            const clickedCell = event.currentTarget; // Use currentTarget for dynamically added listeners
+            const clickedCell = event.currentTarget; 
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
+            // Check directly if the clicked cell is empty and game is active
             if (board[clickedCellIndex] !== '' || !gameActive) {
-                return; // Cell already played or game over
+                return; 
             }
 
-            // Player's move
             makeMove(clickedCellIndex, currentPlayer);
 
-            if (!gameActive) return; // Game ended after player's move
+            if (!gameActive) return; 
 
             // If PvC mode and it's computer's turn
             if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
@@ -237,22 +277,30 @@
 
         // Function to make a move
         function makeMove(index, player) {
-            if (board[index] === '' && gameActive) {
-                board[index] = player;
-                const cellElement = gameBoardElement.children[index];
-                cellElement.textContent = player;
-                if (player === 'X') cellElement.classList.add('x');
-                if (player === 'O') cellElement.classList.add('o');
-                cellElement.setAttribute('aria-label', `Cell ${index + 1}, marked as ${player}`);
+            // The initial check (board[index] === '' && gameActive) is done by handleCellClick
+            board[index] = player;
+            
+            // Update the specific cell UI immediately for player's placed piece
+            const cellElement = gameBoardElement.children[index];
+            cellElement.textContent = player;
+            // Ensure classes are fresh
+            cellElement.classList.remove('x', 'o'); 
+            if (player === 'X') {
+                cellElement.classList.add('x');
+            } else {
+                cellElement.classList.add('o');
+            }
+            cellElement.setAttribute('aria-label', `Cell ${index + 1}, marked as ${player}`);
 
+            applyPush(index, player);
+            renderBoard(); // Re-render the entire board to reflect pushes
 
-                if (checkWin(player)) {
-                    endGame(false, player);
-                } else if (board.every(cell => cell !== '')) {
-                    endGame(true); // It's a tie
-                } else {
-                    switchPlayer();
-                }
+            if (checkWin(player)) {
+                endGame(false, player);
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true); // It's a tie
+            } else {
+                switchPlayer(); // This will update status for next player
             }
         }
 

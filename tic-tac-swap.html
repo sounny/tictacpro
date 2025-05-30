@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Classic</title>
+    <title>Tic Tac Swap</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -25,6 +25,10 @@
         }
         .cell:hover {
             background-color: #334155; /* slate-700 - Lighter for hover */
+        }
+        .cell.selected-for-swap {
+            outline: 3px solid #facc15; /* yellow-400 */
+            outline-offset: 2px;
         }
         .cell.x {
             color: #ef4444; /* red-500 */
@@ -90,7 +94,7 @@
 <body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Classic</h1>
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Swap</h1>
 
         <div id="modeSelection" class="mb-6 text-center">
             <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
@@ -108,6 +112,7 @@
 
             <div class="flex justify-center space-x-3 mt-4">
                  <button id="resetButton" class="reset-button bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset Game</button>
+                 <button id="swapButton" class="reset-button bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105" style="display: none;">Swap Pieces</button>
                  <button id="changeModeButton" class="reset-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Change Mode</button>
             </div>
         </div>
@@ -141,6 +146,11 @@
         let currentPlayer = 'X';
         let gameActive = true;
         let gameMode = ''; // '2P' or 'PvC'
+        let swapModeActive = false;
+        let firstPieceToSwap = null;
+        let playerSwapUsed = { 'X': false, 'O': false };
+        const swapButton = document.getElementById('swapButton');
+        let computerPlayerMark = ''; // Added for PvC fix
 
         const winningConditions = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -172,17 +182,30 @@
         // Function to initialize or reset the game
         function initializeGame() {
             board = ['', '', '', '', '', '', '', '', ''];
-            // currentPlayer = 'X'; // Current player is set when mode is chosen or game is reset
             gameActive = true;
-            statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
-            renderBoard(); // This will now add event listeners correctly after clearing
+            swapModeActive = false;
+            firstPieceToSwap = null;
+            playerSwapUsed = { 'X': false, 'O': false };
+            
+            // Dynamic status message based on whether it's computer's turn
+            let initialStatusText = `Player ${currentPlayer}'s turn`;
+            if (gameMode === 'PvC' && currentPlayer === computerPlayerMark) {
+                initialStatusText = `Computer's (${computerPlayerMark}) turn`;
+            }
+            statusElement.textContent = initialStatusText;
+            
+            renderBoard(); 
+            updateSwapButtonVisibility(); 
+            if (swapButton) swapButton.textContent = "Swap Pieces"; 
 
-            if (gameMode === 'PvC' && currentPlayer === 'O') {
-                statusElement.textContent = "Computer's (O) thinking...";
+            if (gameMode === 'PvC' && currentPlayer === computerPlayerMark) {
+                statusElement.textContent = `Computer's (${computerPlayerMark}) thinking...`;
                 toggleBoardInteraction(false);
+                if (swapButton) swapButton.disabled = true;
                 setTimeout(() => {
-                    computerMove();
+                    computerMove(); // Computer makes its move
                     toggleBoardInteraction(true);
+                    // updateSwapButtonVisibility will be called if game continues via makeMove->switchPlayer
                 }, 700);
             }
         }
@@ -192,59 +215,142 @@
             gameBoardElement.innerHTML = ''; // Clear existing board
             board.forEach((mark, index) => {
                 const cell = document.createElement('div');
-                cell.classList.add('cell', 'rounded-md'); // Cells have their own background now
+                cell.classList.add('cell', 'rounded-md');
                 if (mark === 'X') cell.classList.add('x');
-                if (mark === 'O') cell.classList.add('o');
+                else if (mark === 'O') cell.classList.add('o');
                 cell.textContent = mark;
                 cell.dataset.index = index;
                 cell.setAttribute('aria-label', `Cell ${index + 1}, currently ${mark || 'empty'}`);
                 cell.setAttribute('role', 'button');
                 cell.setAttribute('tabindex', '0');
-                // Add event listeners directly here after creation
+                
+                // Remove any previous swap selection highlight
+                cell.classList.remove('selected-for-swap');
+
                 cell.addEventListener('click', handleCellClick);
-                cell.addEventListener('touchend', handleCellClick, { passive: false }); // passive: false for preventDefault
+                cell.addEventListener('touchend', handleCellClick, { passive: false }); 
                 gameBoardElement.appendChild(cell);
             });
         }
 
         // Function to handle a cell click
         function handleCellClick(event) {
-            event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
+            event.preventDefault(); 
             if (!gameActive) return;
 
-            const clickedCell = event.currentTarget; // Use currentTarget for dynamically added listeners
+            const clickedCell = event.currentTarget; 
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
-            if (board[clickedCellIndex] !== '' || !gameActive) {
-                return; // Cell already played or game over
+            if (swapModeActive) {
+                if (firstPieceToSwap === null) {
+                    // Selecting the first piece to swap
+                    if (board[clickedCellIndex] !== '') { // Must select an occupied cell
+                        firstPieceToSwap = clickedCellIndex;
+                        clickedCell.classList.add('selected-for-swap');
+                        statusElement.textContent = `Player ${currentPlayer}, select the second piece to swap (can be any piece).`;
+                        if (swapButton) swapButton.disabled = true; // Disable swap button while selecting second piece
+                    } else {
+                        showModal("You must select an occupied cell as the first piece to swap.");
+                    }
+                } else {
+                    // Selecting the second piece to swap
+                    if (firstPieceToSwap === clickedCellIndex) { // Cannot swap a piece with itself
+                        showModal("You cannot swap a piece with itself. Select a different second piece or cancel swap.");
+                        return;
+                    }
+                    const secondPieceToSwap = clickedCellIndex;
+                    
+                    // Remove highlight from first piece
+                    const firstCellElement = gameBoardElement.children[firstPieceToSwap];
+                    if (firstCellElement) firstCellElement.classList.remove('selected-for-swap');
+
+                    swapPieces(firstPieceToSwap, secondPieceToSwap);
+                    playerSwapUsed[currentPlayer] = true;
+                    swapModeActive = false;
+                    firstPieceToSwap = null;
+                    
+                    updateSwapButtonVisibility(); // Hide/disable for current player
+
+                    // Check game outcome after swap
+                    if (checkWin(currentPlayer)) { // Check if current player won by swapping
+                        endGame(false, currentPlayer);
+                    } else if (checkWin(currentPlayer === 'X' ? 'O' : 'X')) { // Check if opponent won by the swap
+                         endGame(false, (currentPlayer === 'X' ? 'O' : 'X'));
+                    } else if (board.every(cell => cell !== '')) {
+                        endGame(true); // It's a tie
+                    } else {
+                        switchPlayer(); // This will also update swap button for the new player
+                    }
+                }
+            } else { // Regular move logic
+                if (board[clickedCellIndex] !== '') {
+                     showModal("Cell already taken!");
+                    return; 
+                }
+                makeMove(clickedCellIndex, currentPlayer);
+
+                if (!gameActive) return;
+
+                if (gameMode === 'PvC' && currentPlayer === computerPlayerMark && gameActive) {
+                    statusElement.textContent = `Computer's (${computerPlayerMark}) thinking...`;
+                    toggleBoardInteraction(false);
+                    if (swapButton) swapButton.disabled = true;
+                    setTimeout(() => {
+                        computerMove();
+                        toggleBoardInteraction(true);
+                        updateSwapButtonVisibility(); 
+                    }, 700);
+                }
+            }
+        }
+        
+        // Function to activate swap mode
+        function activateSwapMode() {
+            if (!gameActive || playerSwapUsed[currentPlayer] || (gameMode === 'PvC' && currentPlayer === computerPlayerMark)) {
+                showModal(gameMode === 'PvC' && currentPlayer === computerPlayerMark ? `Computer (${computerPlayerMark}) cannot use swap.` : "Swap already used or game not active!");
+                return;
+            }
+            if (swapModeActive) { // To cancel swap mode if already active
+                swapModeActive = false;
+                if (firstPieceToSwap !== null) {
+                    const firstCellElement = gameBoardElement.children[firstPieceToSwap];
+                    if (firstCellElement) firstCellElement.classList.remove('selected-for-swap');
+                    firstPieceToSwap = null;
+                }
+                statusElement.textContent = `Player ${currentPlayer}'s turn`;
+                if (swapButton) swapButton.textContent = "Swap Pieces";
+                updateSwapButtonVisibility(); // Re-enable if applicable
+                return;
             }
 
-            // Player's move
-            makeMove(clickedCellIndex, currentPlayer);
-
-            if (!gameActive) return; // Game ended after player's move
-
-            // If PvC mode and it's computer's turn
-            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
-                statusElement.textContent = "Computer's (O) thinking...";
-                toggleBoardInteraction(false);
-                setTimeout(() => {
-                    computerMove();
-                    toggleBoardInteraction(true); 
-                }, 700); 
+            swapModeActive = true;
+            firstPieceToSwap = null; // Ensure it's reset when activating
+            statusElement.textContent = `Player ${currentPlayer}, select your first piece to swap.`;
+            if (swapButton) {
+                swapButton.textContent = "Cancel Swap";
+                swapButton.disabled = false; // Ensure it's enabled to cancel
             }
         }
 
+        // Function to swap pieces on the board
+        function swapPieces(index1, index2) {
+            [board[index1], board[index2]] = [board[index2], board[index1]];
+            renderBoard(); // Re-render the entire board to reflect the swap
+        }
+
+
         // Function to make a move
         function makeMove(index, player) {
-            if (board[index] === '' && gameActive) {
+            if (board[index] === '' && gameActive && !swapModeActive) { // Ensure not in swap mode
                 board[index] = player;
+                // No need to update cellElement directly, renderBoard will do it if called.
+                // However, for immediate visual feedback before a full renderBoard, this is fine.
                 const cellElement = gameBoardElement.children[index];
                 cellElement.textContent = player;
+                cellElement.classList.remove('x', 'o'); // remove old classes before adding new one
                 if (player === 'X') cellElement.classList.add('x');
                 if (player === 'O') cellElement.classList.add('o');
                 cellElement.setAttribute('aria-label', `Cell ${index + 1}, marked as ${player}`);
-
 
                 if (checkWin(player)) {
                     endGame(false, player);
@@ -260,9 +366,36 @@
         function switchPlayer() {
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             if (gameActive) {
-                 statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+                let currentTurnText = `Player ${currentPlayer}'s turn`;
+                if (gameMode === 'PvC' && currentPlayer === computerPlayerMark) {
+                    currentTurnText = `Computer's (${computerPlayerMark}) turn`;
+                }
+                statusElement.textContent = currentTurnText;
+                updateSwapButtonVisibility();
             }
         }
+        
+        // Function to update Swap Button Visibility and State
+        function updateSwapButtonVisibility() {
+            if (!swapButton) return;
+
+            if (!gameActive || (gameMode === 'PvC' && currentPlayer === computerPlayerMark)) {
+                swapButton.style.display = 'none';
+                swapButton.disabled = true;
+                return;
+            }
+
+            if (playerSwapUsed[currentPlayer]) {
+                swapButton.style.display = 'none'; 
+                swapButton.disabled = true;
+            } else {
+                swapButton.style.display = 'inline-block'; 
+                swapButton.disabled = false;
+                // Text is "Cancel Swap" if swapModeActive, "Swap Pieces" otherwise.
+                swapButton.textContent = swapModeActive ? "Cancel Swap" : "Swap Pieces";
+            }
+        }
+
 
         // Function to check for a win
         function checkWin(player) {
@@ -273,15 +406,16 @@
 
         // Function for the computer's move (AI)
         function computerMove() {
-            if (!gameActive) return;
+            if (!gameActive || !computerPlayerMark) return;
 
             let bestMove = -1;
+            const humanPlayerMark = (computerPlayerMark === 'X' ? 'O' : 'X');
 
             // 1. Check if computer can win in the next move
             for (let i = 0; i < board.length; i++) {
                 if (board[i] === '') {
-                    board[i] = 'O'; 
-                    if (checkWin('O')) {
+                    board[i] = computerPlayerMark; 
+                    if (checkWin(computerPlayerMark)) {
                         bestMove = i;
                         board[i] = ''; 
                         break;
@@ -294,8 +428,8 @@
             if (bestMove === -1) {
                 for (let i = 0; i < board.length; i++) {
                     if (board[i] === '') {
-                        board[i] = 'X'; 
-                        if (checkWin('X')) {
+                        board[i] = humanPlayerMark; 
+                        if (checkWin(humanPlayerMark)) {
                             bestMove = i;
                             board[i] = ''; 
                             break;
@@ -328,7 +462,7 @@
             }
             
             if (bestMove !== -1) {
-                 makeMove(bestMove, 'O');
+                 makeMove(bestMove, computerPlayerMark);
             } else if (board.every(cell => cell !== '')) { 
                 endGame(true); 
             }
@@ -337,11 +471,25 @@
         // Function to end the game
         function endGame(isTie, winner = null) {
             gameActive = false;
+            swapModeActive = false; // Ensure swap mode is exited
+            if (firstPieceToSwap !== null) {
+                 const firstCellElement = gameBoardElement.children[firstPieceToSwap];
+                 if (firstCellElement) firstCellElement.classList.remove('selected-for-swap');
+                 firstPieceToSwap = null;
+            }
+            if (swapButton) {
+                swapButton.style.display = 'none';
+                swapButton.disabled = true;
+            }
+
             if (isTie) {
                 statusElement.textContent = "It's a Tie!";
                 showModal("It's a Tie! Well played by both sides.");
             } else if (winner) {
-                const winnerName = (gameMode === 'PvC' && winner === 'O') ? "Computer (O)" : `Player ${winner}`;
+                let winnerName = `Player ${winner}`;
+                if (gameMode === 'PvC' && winner === computerPlayerMark) {
+                    winnerName = `Computer (${computerPlayerMark})`;
+                }
                 statusElement.textContent = `${winnerName} wins!`;
                 showModal(`${winnerName} is the winner! Congratulations!`);
 
@@ -381,25 +529,51 @@
             gameMode = 'PvC';
             modeSelectionDiv.classList.add('hidden');
             gameAreaDiv.classList.remove('hidden');
-            currentPlayer = Math.random() < 0.5 ? 'X' : 'O'; // Randomly decide who starts
+            
+            // Randomly assign who is X and who is O between human and computer
+            if (Math.random() < 0.5) {
+                // Human will be X, Computer will be O
+                computerPlayerMark = 'O';
+            } else {
+                // Human will be O, Computer will be X
+                computerPlayerMark = 'X';
+            }
+            // Now, decide who makes the first move
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O'; 
+
             initializeGame();
         });
 
         resetButton.addEventListener('click', () => {
+            // playerSwapUsed is reset in initializeGame
+            // swapModeActive is reset in initializeGame
+            // firstPieceToSwap is reset in initializeGame
+            if (swapButton) swapButton.textContent = "Swap Pieces"; // Reset button text
+            
             if (gameMode === 'PvC'){
+                // Marks (computerPlayerMark) remain the same as set at the start of this PvC game,
+                // but the starting player for the new round is randomized.
                 currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
-            } else {
+            } else { // 2P mode
                 currentPlayer = 'X'; 
+                computerPlayerMark = ''; // Clear computer mark if switching from PvC to 2P then reset
             }
-            initializeGame();
+            initializeGame(); 
         });
         
         changeModeButton.addEventListener('click', () => {
             gameAreaDiv.classList.add('hidden');
             modeSelectionDiv.classList.remove('hidden');
             statusElement.textContent = ""; 
+            computerPlayerMark = ''; // Clear computer mark when changing mode
+            if (swapButton) {
+                swapButton.style.display = 'none'; 
+                swapButton.textContent = "Swap Pieces"; 
+            }
         });
         
+        if (swapButton) swapButton.addEventListener('click', activateSwapMode);
+
         gameBoardElement.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 const activeElement = document.activeElement;
