@@ -1,0 +1,16 @@
+{
+  "name": "tictacpro",
+  "version": "1.0.0",
+  "description": "Welcome to Tic Tac Pro, a collection of classic and innovative Tic Tac Toe game variations!",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
