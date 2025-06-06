@@ -201,7 +201,7 @@
                 toggleBoardInteraction(false);
                 setTimeout(() => {
                     computerMove();
-                    // `handleAIMove` will eventually switch back to 'X' and update status/board interaction
+                      // handleAIMove then switches back to 'X' and updates status/board interaction
                 }, 700); // Delay for AI "thinking"
             } else { // Must be '2P' mode
                 // It was X's turn, so now it's O's turn (or vice-versa if this function is ever used for O)
@@ -287,15 +287,7 @@
 
             // If a move is found, make the move
             if (bestMove !== -1) {
-                // Simulate a click or directly call a modified placement function for AI
-                // We need a way to place the AI's piece and trigger game logic (check win, decay, switch player)
-                // Let's create a helper for this, or adapt handleCellClick.
-                // For now, let's assume we'll call a function that places the piece and handles follow-up.
-                // This will be refined in the "Integrate AI into Game Flow" step.
-                // For this step, the core logic of finding bestMove is the focus.
-                // We will call a new function `handleAIMove(bestMove)` which will be created in the next step.
-                // For now, we can log it or prepare for its integration.
-                // console.log(`AI wants to move to: ${bestMove}`); // Placeholder for actual move execution
+                // Place the AI's piece and handle game logic
                 handleAIMove(bestMove); // AI executes its move
             } else {
                 // This case (no available moves and no win/block) should ideally not happen if game isn't over.
