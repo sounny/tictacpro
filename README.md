@@ -34,6 +34,9 @@ Here are the Tic Tac Toe variations currently available:
 *   **Tic Tac Four (`tic-tac-four.html`)**
     *   A bigger challenge! Play on a 4x4 grid and be the first to get four of your marks in a row.
 
+*   **Tic Tac Toroid (`tic-tac-toroid.html`)**
+    *   A toroidal board where lines wrap around the edges for unexpected winning combinations.
+
 ## How to Play
 
 1.  Visit the live game catalog link above.
