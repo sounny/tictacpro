@@ -49,7 +49,6 @@ While this project was primarily developed by an AI assistant, ideas and contrib
 
 ---
 Enjoy playing!
-=======
 # Tic Tac Pro
 
 Welcome to Tic Tac Pro! This project is a collection of creative and unique versions of the classic Tic Tac Toe game. Our goal is to explore different mechanics and twists on this timeless game, offering a variety of challenges and fun.
