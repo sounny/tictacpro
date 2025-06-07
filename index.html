@@ -238,16 +238,41 @@
     document.querySelectorAll(".like-button").forEach(btn => {
         const key = btn.dataset.key;
         const countSpan = btn.querySelector(".like-count");
+        const localKey = `likes-${key}`;
+        let localCount = parseInt(localStorage.getItem(localKey) || '0');
+
+        function render(count) {
+            countSpan.textContent = count;
+        }
+
         function update() {
             fetch(`https://api.countapi.xyz/get/tictacpro/${key}`)
                 .then(r => r.json())
-                .then(d => countSpan.textContent = d.value);
+                .then(d => {
+                    localCount = d.value;
+                    localStorage.setItem(localKey, localCount);
+                    render(localCount);
+                })
+                .catch(() => {
+                    render(localCount);
+                });
         }
+
         btn.addEventListener("click", () => {
             fetch(`https://api.countapi.xyz/hit/tictacpro/${key}`)
                 .then(r => r.json())
-                .then(d => countSpan.textContent = d.value);
+                .then(d => {
+                    localCount = d.value;
+                    localStorage.setItem(localKey, localCount);
+                    render(localCount);
+                })
+                .catch(() => {
+                    localCount++;
+                    localStorage.setItem(localKey, localCount);
+                    render(localCount);
+                });
         });
+
         update();
     });
     </script>
