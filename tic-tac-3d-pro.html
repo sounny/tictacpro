@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -112,6 +113,7 @@ function createTextSprite(letter, color) {
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
     const sprite = new THREE.Sprite(material);
     sprite.scale.set(0.8, 0.8, 0.8);
+
     return sprite;
 }
 
@@ -131,18 +133,22 @@ function onPointerDown(event) {
     }
 }
 
+
 function flashCube(cube, highlight) {
     const original = cube.material.color.clone();
     cube.material.color.set(highlight);
     setTimeout(() => cube.material.color.copy(original), 250);
 }
 
+
 function makeMove(index, cube) {
     board[index] = currentPlayer;
     const color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
     const sprite = createTextSprite(currentPlayer, color);
     cube.add(sprite);
+
     flashCube(cube, currentPlayer === 'X' ? 0xfca5a5 : 0xbfdbfe);
+
     if (checkWin(currentPlayer)) {
         document.getElementById('status').textContent = `Player ${currentPlayer} wins!`;
         gameActive = false;
@@ -184,5 +190,10 @@ init();
 renderer.domElement.addEventListener('pointerdown', onPointerDown);
 document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
 </script>
+
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+
 </body>
 </html>
