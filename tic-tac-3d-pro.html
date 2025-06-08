@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe 3D Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Using a Three.js version that still provides UMD builds for the examples -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.130.1/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.130.1/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -102,19 +102,18 @@ function createBoard() {
 
 function createTextSprite(letter, color) {
     const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
+    canvas.width = 256; canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0,0,128,128);
-    ctx.font = 'bold 96px sans-serif';
+    ctx.font = 'bold 200px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(letter,64,64);
+    ctx.fillText(letter, 128, 128);
     const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(1,1,1);
+    sprite.scale.set(0.8, 0.8, 0.8);
+
     return sprite;
 }
 
@@ -134,11 +133,22 @@ function onPointerDown(event) {
     }
 }
 
+
+function flashCube(cube, highlight) {
+    const original = cube.material.color.clone();
+    cube.material.color.set(highlight);
+    setTimeout(() => cube.material.color.copy(original), 250);
+}
+
+
 function makeMove(index, cube) {
     board[index] = currentPlayer;
     const color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
     const sprite = createTextSprite(currentPlayer, color);
     cube.add(sprite);
+
+    flashCube(cube, currentPlayer === 'X' ? 0xfca5a5 : 0xbfdbfe);
+
     if (checkWin(currentPlayer)) {
         document.getElementById('status').textContent = `Player ${currentPlayer} wins!`;
         gameActive = false;
@@ -180,8 +190,10 @@ init();
 renderer.domElement.addEventListener('pointerdown', onPointerDown);
 document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
 </script>
+
     <div class="mt-6 text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+
 </body>
 </html>
