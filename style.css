@@ -115,24 +115,6 @@ main {
     background-color: #0284c7; /* sky-600 */
     transform: translateY(-2px); /* Slight lift on hover */
 }
-/* Like button styles */
-.like-container {
-    margin-top: 0.5rem;
-}
-.like-button {
-    background: none;
-    border: none;
-    color: #ef4444;
-    font-size: 1.1rem;
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
-}
-.like-button .like-count {
-    margin-left: 0.25rem;
-    color: #f1f5f9;
-    font-size: 1rem;
-}
 
 /* Footer Styles */
 footer {
