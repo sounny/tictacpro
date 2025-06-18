@@ -103,7 +103,7 @@
         </div>
 
         <div id="gameArea" class="hidden">
-            <div id="gameBoard" class="grid grid-cols-3 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
+            <div id="gameBoard" class="grid grid-cols-4 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
                 </div>
 
             <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
@@ -139,7 +139,7 @@
         const modalCloseButton = document.getElementById('modalCloseButton');
 
         // Game State Variables
-        let board = ['', '', '', '', '', '', '', '', ''];
+        let board = Array(16).fill('');
         let currentPlayer = 'X';
         let gameActive = true;
         let gameMode = ''; // '2P' or 'PvC'
@@ -174,7 +174,7 @@
 
         // Function to initialize or reset the game
         function initializeGame() {
-            board = ['', '', '', '', '', '', '', '', ''];
+            board = Array(16).fill('');
             // currentPlayer = 'X'; // Current player is set when mode is chosen or game is reset
             gameActive = true;
             statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
@@ -269,16 +269,16 @@
 
         // Function to check for a win
         function checkWin(player) {
-            for (let start = 0; start < 9; start++) {
-                const r = Math.floor(start / 3);
-                const c = start % 3;
+            for (let start = 0; start < 16; start++) {
+                const r = Math.floor(start / 4);
+                const c = start % 4;
                 for (const [dr, dc] of directions) {
                     const line = [];
                     let win = true;
                     for (let step = 0; step < 3; step++) {
-                        const rr = (r + dr * step + 3) % 3;
-                        const cc = (c + dc * step + 3) % 3;
-                        const idx = rr * 3 + cc;
+                        const rr = (r + dr * step + 4) % 4;
+                        const cc = (c + dc * step + 4) % 4;
+                        const idx = rr * 4 + cc;
                         line.push(idx);
                         if (board[idx] !== player) {
                             win = false;
@@ -327,14 +327,18 @@
                 }
             }
 
-            // 3. Try to take the center if available
-            if (bestMove === -1 && board[4] === '') {
-                bestMove = 4;
+            // 3. Try to take one of the center spots if available
+            if (bestMove === -1) {
+                const centers = [5, 6, 9, 10];
+                const availableCenters = centers.filter(index => board[index] === '');
+                if (availableCenters.length > 0) {
+                    bestMove = availableCenters[Math.floor(Math.random() * availableCenters.length)];
+                }
             }
 
             // 4. Try to take a corner if available
             if (bestMove === -1) {
-                const corners = [0, 2, 6, 8];
+                const corners = [0, 3, 12, 15];
                 const availableCorners = corners.filter(index => board[index] === '');
                 if (availableCorners.length > 0) {
                     bestMove = availableCorners[Math.floor(Math.random() * availableCorners.length)];
