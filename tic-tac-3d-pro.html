@@ -25,7 +25,7 @@
         <div id="boardContainer" class="mb-4"></div>
         <p id="status" class="text-center text-lg"></p>
         <div class="text-center">
-            <button id="resetBtn" class="mt-4 bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Reset Game</button>
+            <button id="resetBtn" class="mt-4 bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Start Game</button>
         </div>
     </div>
 
@@ -42,7 +42,8 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/exampl
 let scene, camera, renderer, controls, raycaster, mouse;
 const board = Array(27).fill('');
 let currentPlayer = 'X';
-let gameActive = true;
+let gameActive = false;
+let initialized = false;
 const cubes = [];
 
 const winningConditions = [
@@ -182,7 +183,22 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-document.getElementById('resetBtn').addEventListener('click', () => {
+function onResize() {
+    const container = document.getElementById('boardContainer');
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+const resetBtn = document.getElementById('resetBtn');
+resetBtn.addEventListener('click', () => {
+    if (!initialized) {
+        init();
+        renderer.domElement.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('resize', onResize);
+        resetBtn.textContent = 'Restart Game';
+        initialized = true;
+    }
     board.fill('');
     cubes.forEach(c => { while(c.children.length) c.remove(c.children[0]); });
     currentPlayer = 'X';
@@ -190,16 +206,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     gameActive = true;
 });
 
-window.addEventListener('resize', () => {
-    const container = document.getElementById('boardContainer');
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-});
+document.getElementById('status').textContent = 'Click Start Game to begin';
 
-init();
-renderer.domElement.addEventListener('pointerdown', onPointerDown);
-document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
 </script>
 
     <div class="mt-6 text-center">
