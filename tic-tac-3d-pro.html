@@ -92,12 +92,16 @@ function init() {
 }
 
 function createBoard() {
-    const spacing = 1.4;
+    const spacing = 1.7;  // slightly more space between cubes
     const geom = new THREE.BoxGeometry(1,1,1);
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x94a3b8 });
     for (let i=0;i<27;i++) {
         const mat = new THREE.MeshStandardMaterial({ color: 0x4b5563 });
         const cube = new THREE.Mesh(geom, mat);
         cube.userData.index = i;
+        const edges = new THREE.EdgesGeometry(geom);
+        const line = new THREE.LineSegments(edges, edgeMat);
+        cube.add(line);
         const layer = Math.floor(i/9);
         const row = Math.floor((i%9)/3);
         const col = i%3;
@@ -150,7 +154,7 @@ function flashCube(cube, highlight) {
 
 function makeMove(index, cube) {
     board[index] = currentPlayer;
-    const color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
+    const color = currentPlayer === 'X' ? 'rgba(248,113,113,0.8)' : 'rgba(96,165,250,0.8)';
     const sprite = createTextSprite(currentPlayer, color);
     cube.add(sprite);
 
