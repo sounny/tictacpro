@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Trio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body{font-family:'Inter',sans-serif;touch-action:manipulation;}
+        .cell{width:70px;height:70px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;font-weight:bold;cursor:pointer;border:2px solid #374151;background-color:#1e293b;}
+        .x{color:#ef4444;} .o{color:#3b82f6;} .t{color:#facc15;}
+        @media(max-width:600px){.cell{width:55px;height:55px;font-size:1.4rem;}}
+    </style>
+</head>
+<body class="bg-slate-800 text-slate-100 p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Tic Tac Trio</h1>
+    <div id="modeSelection" class="text-center space-y-4">
+        <button id="vsPlayers" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded">Three Players</button>
+        <button id="vsComputer" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded">Two + Computer</button>
+    </div>
+    <div id="gameArea" class="space-y-4 hidden">
+        <div id="gameBoard" class="grid grid-cols-5 gap-1 justify-center mx-auto"></div>
+        <p id="status" class="text-lg text-center"></p>
+        <div class="text-center space-x-2">
+            <button id="resetButton" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Reset</button>
+            <button id="changeModeButton" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Change Mode</button>
+        </div>
+    </div>
+    <script>
+        const gameBoardElement=document.getElementById('gameBoard');
+        const statusElement=document.getElementById('status');
+        const resetButton=document.getElementById('resetButton');
+        const changeModeButton=document.getElementById('changeModeButton');
+        const modeSelectionDiv=document.getElementById('modeSelection');
+        const gameAreaDiv=document.getElementById('gameArea');
+        const vsPlayersButton=document.getElementById('vsPlayers');
+        const vsComputerButton=document.getElementById('vsComputer');
+
+        let board=[];
+        let players=['X','O','△'];
+        let current=0;
+        let gameActive=false;
+        let vsComputer=false;
+        const winLines=[];
+        for(let r=0;r<5;r++){
+            for(let c=0;c<5;c++){
+                if(c<=2) winLines.push([r*5+c,r*5+c+1,r*5+c+2]);
+                if(r<=2) winLines.push([r*5+c,(r+1)*5+c,(r+2)*5+c]);
+                if(r<=2&&c<=2) winLines.push([r*5+c,(r+1)*5+c+1,(r+2)*5+c+2]);
+                if(r<=2&&c>=2) winLines.push([r*5+c,(r+1)*5+c-1,(r+2)*5+c-2]);
+            }
+        }
+        function initializeGame(){
+            board=Array(25).fill('');
+            current=0;
+            gameActive=true;
+            render();
+            updateStatus();
+            if(vsComputer && current===2){
+                statusElement.textContent='Computer thinking...';
+                setTimeout(computerMove,600);
+            }
+        }
+        function render(){
+            gameBoardElement.innerHTML='';
+            board.forEach((m,i)=>{
+                const cell=document.createElement('div');
+                cell.classList.add('cell');
+                if(m==='X')cell.classList.add('x');
+                if(m==='O')cell.classList.add('o');
+                if(m==='△')cell.classList.add('t');
+                cell.textContent=m;
+                cell.dataset.index=i;
+                cell.tabIndex=0;
+                cell.addEventListener('click',handleClick);
+                gameBoardElement.appendChild(cell);
+            });
+        }
+        function handleClick(e){
+            if(!gameActive) return;
+            const idx=parseInt(e.currentTarget.dataset.index);
+            if(board[idx]!=='' ) return;
+            makeMove(idx,players[current]);
+            if(!gameActive) return;
+            if(vsComputer && current===2){
+                statusElement.textContent='Computer thinking...';
+                setTimeout(computerMove,600);
+            }
+        }
+        function makeMove(idx,mark){
+            board[idx]=mark;
+            render();
+            if(checkWin(mark)){ endGame(false,mark); return; }
+            if(board.every(c=>c!=='')){ endGame(true); return; }
+            current=(current+1)%3;
+            updateStatus();
+        }
+        function checkWin(mark){
+            return winLines.some(line=>line.every(i=>board[i]===mark));
+        }
+        function updateStatus(){
+            if(!gameActive) return;
+            const name=vsComputer && current===2?'Computer':`Player ${current+1}`;
+            statusElement.textContent=`${name} (${players[current]}) turn`;
+        }
+        function computerMove(){
+            if(!gameActive) return;
+            const empties=board.map((v,i)=>v===''?i:null).filter(i=>i!==null);
+            const idx=empties[Math.floor(Math.random()*empties.length)];
+            makeMove(idx,players[2]);
+        }
+        function endGame(tie,winner){
+            gameActive=false;
+            if(tie){statusElement.textContent="It's a tie!";alert("It's a tie!");}
+            else{const name=vsComputer&&winner===players[2]?"Computer":`Player ${players.indexOf(winner)+1}`;statusElement.textContent=`${name} wins!`;alert(`${name} wins!`);}
+        }
+        vsPlayersButton.addEventListener('click',()=>{vsComputer=false;modeSelectionDiv.classList.add('hidden');gameAreaDiv.classList.remove('hidden');initializeGame();});
+        vsComputerButton.addEventListener('click',()=>{vsComputer=true;modeSelectionDiv.classList.add('hidden');gameAreaDiv.classList.remove('hidden');initializeGame();});
+        resetButton.addEventListener('click',initializeGame);
+        changeModeButton.addEventListener('click',()=>{gameAreaDiv.classList.add('hidden');modeSelectionDiv.classList.remove('hidden');statusElement.textContent='';gameActive=false;});
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+</body>
+</html>

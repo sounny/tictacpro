@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hex Tac Toe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .cell {
+            width: 100px;
+            height: 86px; /* approximate height for hex */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #f8fafc;
+            cursor: pointer;
+            position: relative;
+        }
+        .cell::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1e293b;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            border: 2px solid #475569;
+        }
+        .cell.x::before { background: #1e293b; border-color: #ef4444; }
+        .cell.o::before { background: #1e293b; border-color: #3b82f6; }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+        .status { margin-top: 1rem; }
+        @media (max-width: 640px) {
+            .board { grid-template-columns: repeat(3, 80px); }
+            .cell { width: 80px; height: 69px; font-size: 2rem; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 flex flex-col items-center p-4">
+    <h1 class="text-3xl font-bold mb-4">Hex Tac Toe</h1>
+    <div id="modeSelection" class="flex gap-4 mb-4">
+        <button id="vsPlayer" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded">2 Player</button>
+        <button id="vsComputer" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded">Vs Computer</button>
+    </div>
+    <div id="gameArea" class="hidden flex flex-col items-center">
+        <div id="board" class="board" aria-label="Game board"></div>
+        <div id="status" class="status h-6"></div>
+        <div class="mt-4 flex gap-2">
+            <button id="reset" class="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded">Reset</button>
+            <button id="changeMode" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded">Change Mode</button>
+        </div>
+    </div>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Return to Menu</a>
+    </div>
+<script>
+const boardElement = document.getElementById('board');
+const statusElement = document.getElementById('status');
+const gameArea = document.getElementById('gameArea');
+const modeSelection = document.getElementById('modeSelection');
+const vsPlayerBtn = document.getElementById('vsPlayer');
+const vsComputerBtn = document.getElementById('vsComputer');
+const resetBtn = document.getElementById('reset');
+const changeModeBtn = document.getElementById('changeMode');
+
+let board = Array(9).fill('');
+let gameMode = '2P';
+let currentPlayer = 'X';
+let gameActive = true;
+
+const winningConditions = [
+    [0,1,2], [3,4,5], [6,7,8],
+    [0,3,6], [1,4,7], [2,5,8],
+    [0,4,8], [2,4,6]
+];
+
+function renderBoard(){
+    boardElement.innerHTML='';
+    board.forEach((mark, idx) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        if(mark==='X') cell.classList.add('x');
+        if(mark==='O') cell.classList.add('o');
+        cell.textContent = mark;
+        cell.dataset.index = idx;
+        cell.addEventListener('click', handleCellClick);
+        boardElement.appendChild(cell);
+    });
+}
+
+function handleCellClick(e){
+    if(!gameActive) return;
+    const index = parseInt(e.currentTarget.dataset.index);
+    if(board[index]!=='' ) return;
+    if(gameMode==='PvC' && currentPlayer==='O') return;
+    board[index]=currentPlayer;
+    renderBoard();
+    if(checkWin(currentPlayer)){
+        endGame(false,currentPlayer);
+        return;
+    }
+    if(board.every(c => c!=='')){
+        endGame(true);
+        return;
+    }
+    switchPlayer();
+    if(gameMode==='PvC' && currentPlayer==='O'){
+        setTimeout(computerMove, 500);
+    }
+}
+
+function switchPlayer(){
+    currentPlayer = currentPlayer==='X' ? 'O' : 'X';
+    if(gameActive){
+        statusElement.textContent = `${gameMode==='PvC' && currentPlayer==='O' ? "Computer's" : `Player ${currentPlayer}`}'s turn`;
+    }
+}
+
+function checkWin(player){
+    return winningConditions.some(c => c.every(i => board[i]===player));
+}
+
+function computerMove(){
+    if(!gameActive) return;
+    let available = board.map((v,i)=> v===''?i:null).filter(v=>v!==null);
+    if(available.length===0) return;
+    // basic AI: block win or take win
+    let move = -1;
+    for(let i of available){
+        board[i]='O';
+        if(checkWin('O')){ move=i; board[i]=''; break; }
+        board[i]='';
+    }
+    if(move===-1){
+        for(let i of available){
+            board[i]='X';
+            if(checkWin('X')){ move=i; board[i]=''; break; }
+            board[i]='';
+        }
+    }
+    if(move===-1){ move = available[Math.floor(Math.random()*available.length)]; }
+    board[move]='O';
+    renderBoard();
+    if(checkWin('O')){ endGame(false,'O'); return; }
+    if(board.every(c=>c!=='')){ endGame(true); return; }
+    switchPlayer();
+}
+
+function endGame(tie,winner){
+    gameActive=false;
+    if(tie){
+        statusElement.textContent = "It's a tie!";
+        alert("It's a tie!");
+    } else {
+        const name = (gameMode==='PvC' && winner==='O') ? 'Computer' : `Player ${winner}`;
+        statusElement.textContent = `${name} wins!`;
+        alert(`${name} wins!`);
+    }
+}
+
+vsPlayerBtn.addEventListener('click', ()=>{
+    gameMode='2P';
+    startGame();
+});
+vsComputerBtn.addEventListener('click', ()=>{
+    gameMode='PvC';
+    startGame();
+});
+
+function startGame(){
+    board=Array(9).fill('');
+    currentPlayer='X';
+    gameActive=true;
+    modeSelection.classList.add('hidden');
+    gameArea.classList.remove('hidden');
+    renderBoard();
+    statusElement.textContent='Player X\'s turn';
+    if(gameMode==='PvC' && currentPlayer==='O') computerMove();
+}
+
+resetBtn.addEventListener('click', ()=>{
+    board=Array(9).fill('');
+    currentPlayer='X';
+    gameActive=true;
+    renderBoard();
+    statusElement.textContent='Player X\'s turn';
+});
+
+changeModeBtn.addEventListener('click', ()=>{
+    gameArea.classList.add('hidden');
+    modeSelection.classList.remove('hidden');
+});
+
+renderBoard();
+</script>
+</body>
+</html>

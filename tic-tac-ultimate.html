@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Ultimate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .mini-board {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            gap: 2px;
+            border: 2px solid #475569;
+            padding: 2px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+        }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+        #gameBoard { display: grid; grid-template-columns: repeat(3, auto); gap: 8px; justify-content: center; }
+        .active-board { border-color: #fbbf24; }
+        .disabled-board { opacity: 0.5; }
+        @media (max-width: 600px){
+            .mini-board{ grid-template-columns: repeat(3, 30px); }
+            .cell{ width:30px; height:30px; font-size:1.25rem; }
+        }
+    </style>
+</head>
+<body class="bg-slate-800 text-slate-100 p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Tic Tac Ultimate</h1>
+    <div id="modeSelection" class="text-center space-y-4">
+        <button id="vsPlayer" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded">Two Player</button>
+        <button id="vsComputer" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded">Vs Computer</button>
+    </div>
+    <div id="gameArea" class="space-y-4 hidden">
+        <div id="gameBoard" class="mx-auto"></div>
+        <p id="status" class="text-lg text-center"></p>
+        <div class="text-center space-x-2">
+            <button id="resetButton" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Reset</button>
+            <button id="changeModeButton" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Change Mode</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+
+        let boards = [];
+        let bigBoard = [];
+        let activeBoard = -1;
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let gameMode = '';
+        const winningConditions = [
+            [0,1,2],[3,4,5],[6,7,8],
+            [0,3,6],[1,4,7],[2,5,8],
+            [0,4,8],[2,4,6]
+        ];
+
+        function initializeGame(){
+            boards = Array.from({length:9}, () => Array(9).fill(''));
+            bigBoard = Array(9).fill('');
+            activeBoard = -1;
+            gameActive = true;
+            renderBoard();
+            updateStatus();
+            if(gameMode==='PvC' && currentPlayer==='O'){
+                statusElement.textContent = "Computer's (O) thinking...";
+                setTimeout(computerMove, 500);
+            }
+        }
+
+        function renderBoard(){
+            gameBoardElement.innerHTML='';
+            boards.forEach((mini, bIndex) => {
+                const miniDiv = document.createElement('div');
+                miniDiv.classList.add('mini-board');
+                if(activeBoard!==-1 && activeBoard!==bIndex) miniDiv.classList.add('disabled-board');
+                if(activeBoard===bIndex) miniDiv.classList.add('active-board');
+                mini.forEach((mark, cIndex) => {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    if(mark==='X') cell.classList.add('x');
+                    if(mark==='O') cell.classList.add('o');
+                    cell.textContent = mark==='X'||mark==='O'?mark:'';
+                    cell.dataset.board=bIndex;
+                    cell.dataset.index=cIndex;
+                    cell.addEventListener('click', handleCellClick);
+                    cell.setAttribute('tabindex','0');
+                    miniDiv.appendChild(cell);
+                });
+                gameBoardElement.appendChild(miniDiv);
+            });
+        }
+
+        function handleCellClick(e){
+            if(!gameActive) return;
+            const b = parseInt(e.currentTarget.dataset.board);
+            const i = parseInt(e.currentTarget.dataset.index);
+            if(activeBoard!==-1 && b!==activeBoard) return;
+            if(boards[b][i]!=='' ) return;
+            makeMove(b,i,currentPlayer);
+            if(!gameActive) return;
+            if(gameMode==='PvC' && currentPlayer==='O'){
+                statusElement.textContent = "Computer's (O) thinking...";
+                setTimeout(computerMove,500);
+            }
+        }
+
+        function makeMove(boardIndex, cellIndex, player){
+            boards[boardIndex][cellIndex]=player;
+            if(checkWin(boards[boardIndex], player)){
+                bigBoard[boardIndex]=player;
+                boards[boardIndex]=boards[boardIndex].map(()=>player);
+            } else if(boards[boardIndex].every(c=>c!=='')){
+                bigBoard[boardIndex]='T';
+            }
+
+            if(checkWin(bigBoard, player)){
+                endGame(false, player);
+                renderBoard();
+                return;
+            } else if(bigBoard.every(c=>c!=='')){
+                endGame(true);
+                renderBoard();
+                return;
+            }
+            activeBoard = bigBoard[cellIndex]==='' ? cellIndex : -1;
+            switchPlayer();
+            renderBoard();
+        }
+
+        function switchPlayer(){
+            currentPlayer = currentPlayer==='X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function updateStatus(){
+            if(!gameActive) return;
+            let boardText = activeBoard===-1 ? 'any board' : `board ${activeBoard+1}`;
+            const playerText = gameMode==='PvC' && currentPlayer==='O' ? "Computer's (O)" : `Player ${currentPlayer}`;
+            statusElement.textContent = `${playerText} turn - play in ${boardText}`;
+        }
+
+        function checkWin(cells, player){
+            return winningConditions.some(cond => cond.every(i => cells[i]===player));
+        }
+
+        function computerMove(){
+            if(!gameActive) return;
+            let possibleBoards=[];
+            if(activeBoard===-1){
+                for(let b=0;b<9;b++) if(bigBoard[b]==='') possibleBoards.push(b);
+            } else {
+                if(bigBoard[activeBoard]==='') possibleBoards=[activeBoard];
+            }
+            if(possibleBoards.length===0){ endGame(true); return; }
+            let bIndex = possibleBoards[Math.floor(Math.random()*possibleBoards.length)];
+            let available = boards[bIndex].map((v,i)=>v===''?i:null).filter(v=>v!==null);
+            if(available.length===0){ activeBoard=-1; computerMove(); return; }
+            let cIndex = available[Math.floor(Math.random()*available.length)];
+            makeMove(bIndex,cIndex,'O');
+        }
+
+        function endGame(tie, winner=null){
+            gameActive=false;
+            if(tie){
+                statusElement.textContent = "It's a tie!";
+                alert("It's a tie!");
+            } else {
+                const name = gameMode==='PvC' && winner==='O' ? 'Computer (O)' : `Player ${winner}`;
+                statusElement.textContent = `${name} wins!`;
+                alert(`${name} wins the big board!`);
+            }
+        }
+
+        vsPlayerButton.addEventListener('click', ()=>{ gameMode='2P'; currentPlayer='X'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
+        vsComputerButton.addEventListener('click', ()=>{ gameMode='PvC'; currentPlayer=Math.random()<0.5?'X':'O'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
+        resetButton.addEventListener('click', ()=>{ currentPlayer= gameMode==='PvC' && Math.random()<0.5 ? 'O' : 'X'; initializeGame(); });
+        changeModeButton.addEventListener('click', ()=>{ gameAreaDiv.classList.add('hidden'); modeSelectionDiv.classList.remove('hidden'); statusElement.textContent=''; gameActive=false; });
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+</body>
+</html>
