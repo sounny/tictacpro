@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Duel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: background-color 0.3s ease;
+        }
+        .cell:hover {
+            background-color: #334155;
+        }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+        @media (max-width: 600px) {
+            .cell { width: 80px; height: 80px; font-size: 2.5rem; }
+            .status { font-size: 1.125rem; }
+            .mode-button, .reset-button { padding: 0.5rem 1rem; font-size: 0.875rem; }
+        }
+        @media (max-width: 400px) {
+            .cell { width: 70px; height: 70px; font-size: 2rem; }
+            .status { font-size: 1rem; }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.5);
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto; padding: 20px; border-radius: 8px;
+            text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-button {
+            margin-top: 15px; padding: 10px 20px; border-radius: 5px; cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Duel</h1>
+        <p class="text-slate-300 text-sm sm:text-base my-4 text-center max-w-xs sm:max-w-sm mx-auto leading-relaxed">
+            Both players choose a cell in secret each round. Selections are revealed together. If you both pick the same square, it stays empty!
+        </p>
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="mode-button bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="mode-button bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-3 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;"></div>
+            <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="reset-button bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset Game</button>
+                 <button id="changeModeButton" class="reset-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Change Mode</button>
+            </div>
+        </div>
+    </div>
+    <div id="messageModal" class="modal">
+        <div class="modal-content bg-slate-800 text-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+            <p id="modalMessage" class="text-lg mb-4"></p>
+            <button id="modalCloseButton" class="modal-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md">OK</button>
+        </div>
+    </div>
+<script>
+const gameBoardElement = document.getElementById('gameBoard');
+const statusElement = document.getElementById('status');
+const resetButton = document.getElementById('resetButton');
+const changeModeButton = document.getElementById('changeModeButton');
+const modeSelectionDiv = document.getElementById('modeSelection');
+const gameAreaDiv = document.getElementById('gameArea');
+const vsPlayerButton = document.getElementById('vsPlayer');
+const vsComputerButton = document.getElementById('vsComputer');
+
+const messageModal = document.getElementById('messageModal');
+const modalMessageElement = document.getElementById('modalMessage');
+const modalCloseButton = document.getElementById('modalCloseButton');
+
+let board = ['', '', '', '', '', '', '', '', ''];
+let gameActive = true;
+let gameMode = '';
+let currentPlayer = 'P1';
+let selectionP1 = null;
+let selectionP2 = null;
+
+const winningConditions = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+];
+
+function showModal(message){
+    modalMessageElement.textContent = message;
+    messageModal.style.display = 'flex';
+}
+function closeModal(){ messageModal.style.display = 'none'; }
+modalCloseButton.addEventListener('click', closeModal);
+window.addEventListener('click', e => { if(e.target===messageModal) closeModal(); });
+
+function initializeGame(){
+    board = ['', '', '', '', '', '', '', '', ''];
+    selectionP1 = null;
+    selectionP2 = null;
+    gameActive = true;
+    currentPlayer = 'P1';
+    renderBoard();
+    if(gameMode === 'PvC'){
+        statusElement.textContent = 'Your turn: choose a square';
+    } else {
+        statusElement.textContent = 'Player 1, choose a square';
+    }
+}
+
+function renderBoard(){
+    gameBoardElement.innerHTML = '';
+    board.forEach((mark, index) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell','rounded-md');
+        if(mark === 'X') cell.classList.add('x');
+        if(mark === 'O') cell.classList.add('o');
+        cell.textContent = mark;
+        cell.dataset.index = index;
+        cell.setAttribute('aria-label', `Cell ${index+1}, ${mark || 'empty'}`);
+        cell.setAttribute('role','button');
+        cell.setAttribute('tabindex','0');
+        cell.addEventListener('click', handleCellClick);
+        cell.addEventListener('touchend', handleCellClick, {passive:false});
+        gameBoardElement.appendChild(cell);
+    });
+}
+
+function handleCellClick(e){
+    e.preventDefault();
+    if(!gameActive) return;
+    const index = parseInt(e.currentTarget.dataset.index);
+    if(board[index] !== '') return;
+    if(gameMode === 'PvC'){
+        if(currentPlayer !== 'P1') return;
+        selectionP1 = index;
+        statusElement.textContent = "Computer choosing...";
+        toggleBoardInteraction(false);
+        setTimeout(() => {
+            computerSelect();
+            processRound();
+            toggleBoardInteraction(true);
+        }, 700);
+    } else {
+        if(currentPlayer === 'P1'){
+            selectionP1 = index;
+            currentPlayer = 'P2';
+            statusElement.textContent = 'Player 2, choose a square';
+        } else {
+            selectionP2 = index;
+            processRound();
+        }
+    }
+}
+
+function processRound(){
+    if(selectionP1 === null) return;
+    if(gameMode === '2P' && selectionP2 === null) return;
+    if(gameMode === 'PvC' && selectionP2 === null) return;
+
+    if(selectionP1 === selectionP2){
+        showModal('Both chose the same square! No marks placed.');
+    } else {
+        if(selectionP1 !== null) board[selectionP1] = 'X';
+        if(selectionP2 !== null) board[selectionP2] = 'O';
+    }
+    renderBoard();
+
+    if(checkWin('X')){
+        endGame(false,'P1');
+        return;
+    }
+    if(checkWin('O')){
+        endGame(false,'P2');
+        return;
+    }
+    if(board.every(cell => cell !== '')){
+        endGame(true);
+        return;
+    }
+    startNextRound();
+}
+
+function startNextRound(){
+    selectionP1 = null;
+    selectionP2 = null;
+    currentPlayer = 'P1';
+    statusElement.textContent = gameMode === 'PvC' ? 'Your turn: choose a square' : 'Player 1, choose a square';
+}
+
+function checkWin(player){
+    return winningConditions.some(c => c.every(i => board[i] === player));
+}
+
+function computerSelect(){
+    const available = board.map((v,i) => v === '' ? i : null).filter(v => v !== null);
+    if(available.length === 0){
+        selectionP2 = null;
+        return;
+    }
+    selectionP2 = available[Math.floor(Math.random()*available.length)];
+}
+
+function endGame(tie, winner=null){
+    gameActive = false;
+    if(tie){
+        statusElement.textContent = "It's a Tie!";
+        showModal("It's a Tie! Well played by both sides.");
+    } else if(winner){
+        const name = (gameMode==='PvC' && winner==='P2') ? 'Computer (O)' : `Player ${winner==='P1' ? '1 (X)' : '2 (O)'}`;
+        statusElement.textContent = `${name} wins!`;
+        showModal(`${name} is the winner! Congratulations!`);
+        winningConditions.forEach(cond => {
+            if(cond.every(i => board[i] === (winner==='P1'?'X':'O'))){
+                cond.forEach(i => gameBoardElement.children[i].classList.add('bg-yellow-400','text-slate-800'));
+            }
+        });
+    }
+}
+
+function toggleBoardInteraction(enable){
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(c => {
+        if(enable){
+            c.style.pointerEvents='auto';
+            c.style.opacity='1';
+        } else {
+            c.style.pointerEvents='none';
+            c.style.opacity='0.7';
+        }
+    });
+}
+
+vsPlayerButton.addEventListener('click', () => {
+    gameMode = '2P';
+    modeSelectionDiv.classList.add('hidden');
+    gameAreaDiv.classList.remove('hidden');
+    initializeGame();
+});
+
+vsComputerButton.addEventListener('click', () => {
+    gameMode = 'PvC';
+    modeSelectionDiv.classList.add('hidden');
+    gameAreaDiv.classList.remove('hidden');
+    initializeGame();
+});
+
+resetButton.addEventListener('click', () => {
+    initializeGame();
+});
+
+changeModeButton.addEventListener('click', () => {
+    gameAreaDiv.classList.add('hidden');
+    modeSelectionDiv.classList.remove('hidden');
+    statusElement.textContent = '';
+});
+
+gameBoardElement.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){
+        const active = document.activeElement;
+        if(active && active.classList.contains('cell')){
+            handleCellClick({ currentTarget: active, preventDefault: () => {} });
+        }
+    }
+});
+
+modeSelectionDiv.classList.remove('hidden');
+gameAreaDiv.classList.add('hidden');
+</script>
+<div class="mt-6 text-center">
+    <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+</div>
+</body>
+</html>
