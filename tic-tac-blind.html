@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Blind</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151; /* gray-700 - Cell's own border */
+            background-color: #1e293b; /* slate-800 - Cell background to match container */
+            transition: background-color 0.3s ease, color 0.3s ease, opacity 0.3s ease; /* Added color and opacity transition */
+        }
+        .cell:hover {
+            background-color: #334155; /* slate-700 - Lighter for hover */
+        }
+        .cell.x {
+            color: #ef4444; /* red-500 */
+        }
+        .cell.o {
+            color: #3b82f6; /* blue-500 */
+        }
+        .cell.hidden-mark { /* Style for when the mark is hidden but cell is taken */
+            color: transparent !important; /* Make text transparent */
+        }
+        .cell.revealed {
+             /* Temporarily force color visible if needed, though direct class removal is better */
+        }
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+            .status {
+                font-size: 1.125rem; /* text-lg */
+            }
+            .mode-button, .reset-button {
+                padding: 0.5rem 1rem; /* py-2 px-4 */
+                font-size: 0.875rem; /* text-sm */
+            }
+        }
+        @media (max-width: 400px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+             .status {
+                font-size: 1rem; /* text-base */
+            }
+        }
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">Tic Tac Blind</h1>
+        <p class="text-slate-300 text-sm sm:text-base my-4 text-center max-w-xs sm:max-w-sm mx-auto leading-relaxed">
+            Test your memory! Marks are hidden shortly after being placed. Can you recall the board to achieve three in a row?
+        </p>
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="mode-button bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="mode-button bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-3 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;">
+                </div>
+
+            <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="reset-button bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset Game</button>
+                 <button id="changeModeButton" class="reset-button bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Change Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="modal">
+        <div class="modal-content bg-slate-800 text-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+            <p id="modalMessage" class="text-lg mb-4"></p>
+            <button id="modalCloseButton" class="modal-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-5 rounded-md">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+
+        // Modal elements
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State Variables
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+        const HIDE_DELAY = 1500; // ms to hide the mark
+        let hideTimeoutId = null; // To manage the timeout for hiding marks
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        // --- Modal Functions ---
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+            clearTimeout(hideTimeoutId); // Cancel any pending hide operations
+            revealAllMarks(true); // Reveal board when modal shows, and ensure it stays revealed
+        }
+
+        function closeModal() {
+            messageModal.style.display = 'none';
+            if (gameActive) { // If game is still active, hide marks again after a delay
+                brieflyShowThenHideAll();
+            } else { // If game ended, keep showing marks
+                revealAllMarks(true); // Ensure marks stay revealed
+            }
+        }
+
+        modalCloseButton.addEventListener('click', closeModal);
+        window.addEventListener('click', (event) => {
+            if (event.target === messageModal) {
+                closeModal();
+            }
+        });
+
+        // --- Game Logic Functions ---
+        function initializeGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+
+            renderBoard(); // Initial render, marks will be hidden by default by renderBoard logic if game is active
+
+            // Briefly show the board at the very start or on reset, then hide.
+            brieflyShowThenHideAll();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Computer's (O) thinking...";
+                toggleBoardInteraction(false); // Disable board for player while computer thinks
+                // Delay computer's move slightly longer than HIDE_DELAY to ensure player sees the cleared board
+                setTimeout(() => {
+                    computerMove();
+                    toggleBoardInteraction(true); // Re-enable board after computer moves
+                }, HIDE_DELAY + 700);
+            }
+        }
+
+        // Function to render the board on the UI
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-md');
+                cell.textContent = mark;
+
+                if (mark === 'X') cell.classList.add('x');
+                if (mark === 'O') cell.classList.add('o');
+
+                // By default, if a mark exists and game is active, it should be hidden (unless explicitly revealed)
+                // This logic is now primarily handled by hideAllMarks and revealAllMarks
+                if (mark !== '' && gameActive) { // If there's a mark and game is active
+                    cell.classList.add('hidden-mark'); // Start hidden
+                } else if (mark !== '') { // If mark exists and game is NOT active (i.e. game over)
+                    cell.classList.remove('hidden-mark'); // Ensure it's visible
+                }
+
+
+                cell.dataset.index = index;
+                cell.setAttribute('aria-label', `Cell ${index + 1}, currently ${mark || 'empty'}`);
+                cell.setAttribute('role', 'button');
+                cell.setAttribute('tabindex', '0');
+                cell.addEventListener('click', handleCellClick);
+                cell.addEventListener('touchend', handleCellClick, { passive: false });
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        function hideAllMarks() {
+            if (!gameActive) return;
+            board.forEach((mark, index) => {
+                if (mark !== '') {
+                    const cellElement = gameBoardElement.children[index];
+                    if(cellElement) cellElement.classList.add('hidden-mark');
+                }
+            });
+        }
+
+        function revealAllMarks(keepRevealed = false) {
+            clearTimeout(hideTimeoutId); // Clear any pending hide operations
+            board.forEach((mark, index) => {
+                if (mark !== '') {
+                    const cellElement = gameBoardElement.children[index];
+                    if(cellElement) cellElement.classList.remove('hidden-mark');
+                }
+            });
+            // If not meant to be kept revealed (e.g. during active gameplay), schedule to hide again
+            if (!keepRevealed && gameActive) {
+                hideTimeoutId = setTimeout(hideAllMarks, HIDE_DELAY);
+            }
+        }
+
+        function brieflyShowThenHideAll() {
+            revealAllMarks(false); // Reveal and then schedule to hide
+        }
+
+        function handleCellClick(event) {
+            event.preventDefault();
+            clearTimeout(hideTimeoutId); // Player is interacting, stop any pending hide
+
+            if (!gameActive) {
+                revealAllMarks(true); // If game is over, clicking a cell reveals board and keeps it revealed
+                return;
+            }
+
+            const clickedCell = event.currentTarget;
+            const clickedCellIndex = parseInt(clickedCell.dataset.index);
+
+            if (board[clickedCellIndex] !== '') { // Cell already taken
+                // Briefly show the mark of the already taken cell
+                const cellElement = gameBoardElement.children[clickedCellIndex];
+                if (cellElement) cellElement.classList.remove('hidden-mark');
+
+                hideTimeoutId = setTimeout(() => {
+                    if (gameActive && cellElement) cellElement.classList.add('hidden-mark');
+                    // After showing the already taken cell, re-hide all other marks as well if they were revealed
+                    brieflyShowThenHideAll();
+                }, HIDE_DELAY);
+                return;
+            }
+
+            // Player's move
+            makeMove(clickedCellIndex, currentPlayer); // makeMove will handle revealing the new move and then hiding all
+
+            if (!gameActive) { // Game ended after player's move
+                revealAllMarks(true); // Keep marks visible
+                return;
+            }
+
+            // If PvC mode and it's computer's turn
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                statusElement.textContent = "Computer's (O) thinking...";
+                toggleBoardInteraction(false);
+                // Computer move is delayed to allow player to see their mark revealed, then all marks hidden, then computer moves
+                setTimeout(() => {
+                    computerMove();
+                    toggleBoardInteraction(true);
+                }, HIDE_DELAY + 200); // Delay after player's mark is hidden
+            } else if (gameActive) {
+                // For 2P mode, or if it's Player X's turn again in PvC
+                // After player's move, the board was revealed by makeMove, now schedule to hide it.
+                 brieflyShowThenHideAll();
+            }
+        }
+
+        function makeMove(index, player) {
+            if (board[index] === '' && gameActive) {
+                board[index] = player;
+                renderBoard(); // Render board (new mark will be initially hidden by renderBoard if gameActive)
+
+                // Explicitly reveal the new mark and then the whole board briefly
+                const cellElement = gameBoardElement.children[index];
+                if (cellElement) cellElement.classList.remove('hidden-mark'); // Show the new move
+
+                revealAllMarks(false); // Reveal all marks, and schedule them to be hidden after HIDE_DELAY
+
+                if (checkWin(player)) {
+                    endGame(false, player); // endGame will call revealAllMarks(true)
+                } else if (board.every(cell => cell !== '')) {
+                    endGame(true); // endGame will call revealAllMarks(true)
+                } else {
+                    switchPlayer();
+                    // Hiding is handled by revealAllMarks(false) or by the next player's click/computer's move sequence
+                }
+            }
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            if (gameActive) {
+                 statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Computer's (O)" : `Player ${currentPlayer}'s`} turn`;
+            }
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            // --- Standard AI Logic (no changes needed here for "blind" aspect as AI uses `board` array) ---
+            let bestMove = -1;
+            // 1. Win
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin('O')) { bestMove = i; board[i] = ''; break; }
+                    board[i] = '';
+                }
+            }
+            // 2. Block
+            if (bestMove === -1) {
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        if (checkWin('X')) { bestMove = i; board[i] = ''; break; }
+                        board[i] = '';
+                    }
+                }
+            }
+            // 3. Center
+            if (bestMove === -1 && board[4] === '') bestMove = 4;
+            // 4. Corners
+            if (bestMove === -1) {
+                const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+                if (corners.length > 0) bestMove = corners[Math.floor(Math.random() * corners.length)];
+            }
+            // 5. Sides
+            if (bestMove === -1) {
+                const sides = [1, 3, 5, 7].filter(i => board[i] === '');
+                if (sides.length > 0) bestMove = sides[Math.floor(Math.random() * sides.length)];
+            }
+             // Fallback: any available
+             if (bestMove === -1) {
+                const availableMoves = board.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+                if (availableMoves.length > 0) {
+                    bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                }
+            }
+            // --- End of AI Logic ---
+
+            if (bestMove !== -1) {
+                 makeMove(bestMove, 'O'); // makeMove will handle revealing and then scheduling hide
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true);
+            }
+        }
+
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            clearTimeout(hideTimeoutId); // Cancel any pending hide operations
+            revealAllMarks(true); // Reveal all marks and keep them visible
+
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("It's a Tie! Board revealed.");
+            } else if (winner) {
+                const winnerName = (gameMode === 'PvC' && winner === 'O') ? "Computer (O)" : `Player ${winner}`;
+                statusElement.textContent = `${winnerName} wins!`;
+                showModal(`${winnerName} is the winner! Board revealed.`);
+
+                winningConditions.forEach(condition => {
+                    if (condition.every(index => board[index] === winner)) {
+                        condition.forEach(index => {
+                            const cellElem = gameBoardElement.children[index];
+                            if(cellElem) {
+                                cellElem.classList.add('bg-yellow-400', 'text-slate-800');
+                                cellElem.classList.remove('hidden-mark');
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        function toggleBoardInteraction(enable) {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                if (enable) {
+                    cell.style.pointerEvents = 'auto';
+                    cell.style.opacity = '1';
+                } else {
+                    cell.style.pointerEvents = 'none';
+                    cell.style.opacity = '0.7';
+                }
+            });
+        }
+
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            currentPlayer = 'X';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+            // brieflyShowThenHideAll(); // Called by initializeGame
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            initializeGame();
+            // brieflyShowThenHideAll(); // Called by initializeGame
+        });
+
+        resetButton.addEventListener('click', () => {
+            clearTimeout(hideTimeoutId); // Clear any pending hide before reset
+            if (gameMode === 'PvC'){
+                currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            } else {
+                currentPlayer = 'X';
+            }
+            initializeGame();
+            // brieflyShowThenHideAll(); // Called by initializeGame
+        });
+
+        changeModeButton.addEventListener('click', () => {
+            clearTimeout(hideTimeoutId);
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+            statusElement.textContent = "";
+            gameActive = false;
+        });
+
+        gameBoardElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement.classList.contains('cell')) {
+                    handleCellClick({ currentTarget: activeElement, preventDefault: () => {} });
+                }
+            }
+        });
+
+        // Initial setup
+        modeSelectionDiv.classList.remove('hidden');
+        gameAreaDiv.classList.add('hidden');
+
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+</body>
+</html>
