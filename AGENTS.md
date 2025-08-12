@@ -49,14 +49,16 @@ The project currently includes the following games:
 * Tic Tac Blind
 * Tic Tac Trivia
 * Tic Tac Mirror
+* Tic Tac Slide
 
 ### Proposed Variants
 Agents should maintain a list of ideas here. If five similar suggestions accumulate, implement that variant, mark it **done**, and propose another. Otherwise, pick one of your own ideas to implement and add a new suggestion.
 
-* Tic Tac Slide – row slides sideways after each move *(proposed)*
+* Tic Tac Freeze – after each move, a random empty cell is frozen and becomes unusable *(proposed)*
 
 ## Log
 - 2025-07-23 ChatGPT: Created `AGENTS.md` and established logging instructions.
 
 - 2025-07-27 ChatGPT: Added instructions for creating variants and listed games.
 - 2025-08-12 ChatGPT: Implemented Tic Tac Mirror variant and updated variant lists.
+- 2025-02-14 ChatGPT: Implemented Tic Tac Slide variant and updated variant lists.
