@@ -51,11 +51,12 @@ The project currently includes the following games:
 * Tic Tac Mirror
 * Tic Tac Slide
 * Tic Tac Freeze
+* Tic Tac Time
 
 ### Proposed Variants
 Agents should maintain a list of ideas here. If five similar suggestions accumulate, implement that variant, mark it **done**, and propose another. Otherwise, pick one of your own ideas to implement and add a new suggestion.
 
-* Tic Tac Time – once per game, a player can undo their previous move *(proposed)*
+* Tic Tac Portal – playing in a corner teleports your mark to the opposite corner *(proposed)*
 
 ## Log
 - 2025-07-23 ChatGPT: Created `AGENTS.md` and established logging instructions.
@@ -64,3 +65,4 @@ Agents should maintain a list of ideas here. If five similar suggestions accumul
 - 2025-08-12 ChatGPT: Implemented Tic Tac Mirror variant and updated variant lists.
 - 2025-02-14 ChatGPT: Implemented Tic Tac Slide variant and updated variant lists.
 - 2025-08-12 ChatGPT: Implemented Tic Tac Freeze variant and updated variant lists.
+- 2025-08-13 ChatGPT: Implemented Tic Tac Time variant with undo feature and updated variant lists.
