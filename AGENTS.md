@@ -53,11 +53,12 @@ The project currently includes the following games:
 * Tic Tac Freeze
 * Tic Tac Time
 * Tic Tac Portal
+* Tic Tac Wind
 
 ### Proposed Variants
 Agents should maintain a list of ideas here. If five similar suggestions accumulate, implement that variant, mark it **done**, and propose another. Otherwise, pick one of your own ideas to implement and add a new suggestion.
 
-* Tic Tac Wind – after each move, a random row shifts one space left or right *(proposed)*
+* Tic Tac Eclipse – when a player claims the center, the corners temporarily darken and cannot be played on the next turn *(proposed)*
 
 ## Log
 - 2025-07-23 ChatGPT: Created `AGENTS.md` and established logging instructions.
@@ -68,3 +69,4 @@ Agents should maintain a list of ideas here. If five similar suggestions accumul
 - 2025-08-12 ChatGPT: Implemented Tic Tac Freeze variant and updated variant lists.
 - 2025-08-13 ChatGPT: Implemented Tic Tac Time variant with undo feature and updated variant lists.
 - 2025-08-15 ChatGPT: Implemented Tic Tac Portal variant and updated variant lists.
+- 2025-08-27 ChatGPT: Implemented Tic Tac Wind variant with gusting rows and updated variant lists.
