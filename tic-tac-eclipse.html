@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Eclipse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            border: 2px solid #334155;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05), rgba(30, 41, 59, 0.95));
+            color: #e5e7eb;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .cell:hover {
+            background-color: rgba(51, 65, 85, 0.8);
+            transform: translateY(-2px);
+        }
+        .cell.x { color: #f87171; }
+        .cell.o { color: #60a5fa; }
+        .cell.shadowed {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.95));
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.45);
+            filter: grayscale(0.3);
+        }
+        @media (max-width: 640px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-black text-white min-h-screen flex items-center justify-center p-4">
+    <main class="bg-slate-800/70 backdrop-blur-lg border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl p-6 sm:p-8 space-y-6">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-4xl sm:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500">Tic Tac Eclipse</h1>
+                <p class="text-slate-200 max-w-2xl mt-2 leading-relaxed">
+                    Claim the center to cast a brief eclipse: all four corners darken and are sealed for your opponent's next turn. When the shadow lifts, normal play resumes—plan your timing to bend the light in your favor.
+                </p>
+            </div>
+            <div class="flex items-center gap-3 self-start md:self-center">
+                <div class="h-12 w-12 rounded-full bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 animate-pulse"></div>
+                <p class="text-sm text-amber-100">Solar pulse tracks whose turn holds the light.</p>
+            </div>
+        </header>
+
+        <section class="grid md:grid-cols-[1fr_auto] gap-6 items-start">
+            <div class="space-y-4">
+                <div id="status" class="text-lg sm:text-xl font-semibold text-amber-100">Player X begins under clear skies.</div>
+                <div class="flex flex-wrap items-center gap-3 text-sm text-slate-200">
+                    <span id="eclipseBadge" class="px-3 py-1 rounded-full bg-slate-700 border border-slate-600">Corners open</span>
+                    <span class="px-3 py-1 rounded-full bg-slate-700 border border-slate-600">3x3 grid</span>
+                    <span class="px-3 py-1 rounded-full bg-slate-700 border border-slate-600">2 players</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 bg-slate-700 p-2 rounded-xl shadow-inner w-fit">
+                    <div id="board" class="grid grid-cols-3 gap-2"></div>
+                </div>
+                <p id="hint" class="text-slate-300 text-sm leading-relaxed">
+                    Tip: the eclipse lasts exactly one opposing turn. Corners glow again after the shadowed player places their mark.
+                </p>
+                <div class="flex gap-3">
+                    <button id="resetButton" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-lg shadow-md transition duration-150">Reset Game</button>
+                    <button id="centerButton" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-150">Center first move</button>
+                </div>
+            </div>
+            <aside class="bg-slate-900/70 border border-slate-700 rounded-xl p-4 w-full max-w-sm space-y-3 shadow-inner">
+                <h2 class="text-2xl font-bold text-amber-200">How Eclipse Works</h2>
+                <ul class="space-y-2 text-slate-200 text-sm">
+                    <li class="flex gap-2"><span class="text-amber-400">•</span> Take the center to trigger a one-turn corner blackout for your opponent.</li>
+                    <li class="flex gap-2"><span class="text-amber-400">•</span> Corner cells darken and cannot be selected while shadowed.</li>
+                    <li class="flex gap-2"><span class="text-amber-400">•</span> The shadow clears right after the blocked player moves.</li>
+                    <li class="flex gap-2"><span class="text-amber-400">•</span> Standard win rules: three in a row claims the light.</li>
+                </ul>
+                <div class="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-3 text-slate-100 text-sm border border-slate-600">
+                    Use the solar lock to force edge plays, then reopen the corners for your closing lines.
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const hintElement = document.getElementById('hint');
+        const eclipseBadge = document.getElementById('eclipseBadge');
+        const resetButton = document.getElementById('resetButton');
+        const centerButton = document.getElementById('centerButton');
+
+        const cornerIndices = [0, 2, 6, 8];
+        let board = Array(9).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let eclipseTriggered = false;
+        let cornersShadowed = false;
+        let pendingShadow = false;
+
+        const winningLines = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function buildBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell rounded-lg select-none';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleMove(i));
+                boardElement.appendChild(cell);
+            }
+            renderBoard();
+        }
+
+        function handleMove(index) {
+            if (!gameActive || board[index]) return;
+            if (cornersShadowed && cornerIndices.includes(index)) {
+                flashHint('Corners are shadowed this turn. Choose an edge.');
+                return;
+            }
+
+            board[index] = currentPlayer;
+            if (index === 4 && !eclipseTriggered) {
+                pendingShadow = true;
+                eclipseTriggered = true;
+                flashHint('Center claimed! An eclipse will shadow the corners next turn.');
+            }
+
+            renderBoard();
+            if (checkWin()) {
+                statusElement.textContent = `Player ${currentPlayer} wins!`;
+                gameActive = false;
+                eclipseBadge.textContent = 'Game over';
+                eclipseBadge.className = 'px-3 py-1 rounded-full bg-emerald-500 text-slate-900 font-semibold';
+                return;
+            }
+            if (board.every(mark => mark)) {
+                statusElement.textContent = "It's a draw. No more light to claim.";
+                gameActive = false;
+                eclipseBadge.textContent = 'Draw';
+                eclipseBadge.className = 'px-3 py-1 rounded-full bg-slate-500 text-slate-900 font-semibold';
+                return;
+            }
+
+            advanceTurn();
+        }
+
+        function advanceTurn() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            if (pendingShadow) {
+                cornersShadowed = true;
+                pendingShadow = false;
+            } else if (cornersShadowed) {
+                cornersShadowed = false;
+            }
+            updateStatus();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            Array.from(boardElement.children).forEach((cell, index) => {
+                cell.textContent = board[index];
+                cell.classList.toggle('x', board[index] === 'X');
+                cell.classList.toggle('o', board[index] === 'O');
+                const shadowed = cornersShadowed && cornerIndices.includes(index) && !board[index];
+                cell.classList.toggle('shadowed', shadowed);
+                cell.classList.toggle('cursor-not-allowed', shadowed);
+            });
+            updateBadge();
+        }
+
+        function updateStatus() {
+            const skyNote = cornersShadowed ? 'Corners are sealed by the eclipse.' : 'Skies are clear.';
+            statusElement.textContent = `Player ${currentPlayer}'s turn — ${skyNote}`;
+        }
+
+        function updateBadge() {
+            if (cornersShadowed) {
+                eclipseBadge.textContent = 'Corners shadowed';
+                eclipseBadge.className = 'px-3 py-1 rounded-full bg-amber-500 text-slate-900 font-semibold';
+            } else {
+                eclipseBadge.textContent = 'Corners open';
+                eclipseBadge.className = 'px-3 py-1 rounded-full bg-slate-700 border border-slate-600';
+            }
+        }
+
+        function flashHint(message) {
+            hintElement.textContent = message;
+            hintElement.classList.add('text-amber-200');
+            setTimeout(() => {
+                hintElement.textContent = 'Tip: the eclipse lasts exactly one opposing turn. Corners glow again after the shadowed player places their mark.';
+                hintElement.classList.remove('text-amber-200');
+            }, 2000);
+        }
+
+        function checkWin() {
+            return winningLines.some(line => {
+                const [a, b, c] = line;
+                return board[a] && board[a] === board[b] && board[a] === board[c];
+            });
+        }
+
+        function resetGame() {
+            board = Array(9).fill('');
+            currentPlayer = 'X';
+            gameActive = true;
+            eclipseTriggered = false;
+            cornersShadowed = false;
+            pendingShadow = false;
+            statusElement.textContent = 'Player X begins under clear skies.';
+            hintElement.textContent = 'Tip: the eclipse lasts exactly one opposing turn. Corners glow again after the shadowed player places their mark.';
+            eclipseBadge.textContent = 'Corners open';
+            eclipseBadge.className = 'px-3 py-1 rounded-full bg-slate-700 border border-slate-600';
+            renderBoard();
+        }
+
+        function playCenterStart() {
+            if (!gameActive || board.some(mark => mark)) {
+                resetGame();
+            }
+            handleMove(4);
+        }
+
+        resetButton.addEventListener('click', resetGame);
+        centerButton.addEventListener('click', playCenterStart);
+
+        buildBoard();
+        updateStatus();
+    </script>
+</body>
+</html>
