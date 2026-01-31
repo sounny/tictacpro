@@ -51,3 +51,4 @@ We are building a portfolio-worthy collection that demonstrates:
 - 2025-11-21 ChatGPT: Implemented Tic Tac Eclipse variant, updated index, and refreshed variant lists.
 - 2025-12-08 Antigravity: Refactored agent documentation into multiple files for better scalability and clarity.
 - 2025-12-10 ChatGPT: Implemented Tic Tac Orbit variant and updated variant listings.
+- 2026-01-31 Copilot: Implemented Tic Tac Chaos variant with dynamic board size changes (3x3 ↔ 4x4) and updated variant listings.
