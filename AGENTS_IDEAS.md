@@ -6,7 +6,6 @@ Agents: Maintain this list. When you complete a variant, move it to the "Existin
 
 ### Proposed Variants (Ready to Build)
 
-*   **Tic Tac Chaos**: The board size changes randomly (3x3 to 4x4) during the game.
 *   **Tic Tac Stealth**: Opponent's moves are invisible for 1 turn.
 *   **Multiplayer Websockets**: (Future Goal) Real-time P2P play.
 
@@ -52,3 +51,4 @@ Agents: Maintain this list. When you complete a variant, move it to the "Existin
 *   Tic Tac Time
 *   Tic Tac Portal
 *   Tic Tac Orbit
+*   Tic Tac Chaos
