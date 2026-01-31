@@ -238,7 +238,7 @@
 
         // --- Chaos Functions ---
         function shouldChangeBoardSize() {
-            // Change board every 3-5 moves, with some randomness
+            // Attempt to change board at multiples of 3 or 4 moves, with 50% probability
             if (moveCount < 2) return false; // Don't change too early
             if (moveCount % 3 === 0 || moveCount % 4 === 0) {
                 return Math.random() < 0.5; // 50% chance on eligible moves
