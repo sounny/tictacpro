@@ -1,0 +1,26 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Welcome to Tic Tac Pro, a collection of classic and innovative Tic Tac Toe game variations!",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha tests/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sounny/tictacpro.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sounny/tictacpro/issues"
+  },
+  "homepage": "https://github.com/sounny/tictacpro#readme",
+  "devDependencies": {
+    "canvas": "^3.2.3",
+    "jsdom": "^29.1.1",
+    "mocha": "^11.7.5"
+  }
+}
