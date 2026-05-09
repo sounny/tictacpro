@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Wild</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -128,6 +129,7 @@
     </div>
 
     <script>
+
         // DOM Elements
         const gameBoardElement = document.getElementById('gameBoard');
         const statusElement = document.getElementById('status');
@@ -160,16 +162,18 @@
         ];
 
         // --- Modal Functions ---
+        /** Shows the outcome modal. */
         function showModal(message) {
-            modalMessageElement.textContent = message;
-            messageModal.style.display = 'flex';
+            TicTacUtils.showModal(message, messageModal, modalMessageElement);
         }
+
+        /** Closes the outcome modal. */
 
         function closeModal() {
-            messageModal.style.display = 'none';
+            TicTacUtils.closeModal(messageModal);
         }
 
-        modalCloseButton.addEventListener('click', closeModal);
+        if (modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
         // Close modal if user clicks outside of it
         window.addEventListener('click', (event) => {
             if (event.target === messageModal) {
@@ -181,6 +185,7 @@
         // --- Game Logic Functions ---
 
         // Function to initialize or reset the game
+        /** Initializes or resets the game state and UI. */
         function initializeGame() {
             boardSymbols = ['', '', '', '', '', '', '', '', ''];
             boardOwners = ['', '', '', '', '', '', '', '', ''];
@@ -200,6 +205,7 @@
         }
 
         // Function to render the board on the UI
+        /** Renders the board to the DOM. */
         function renderBoard() {
             gameBoardElement.innerHTML = '';
             boardSymbols.forEach((mark, index) => {
@@ -220,6 +226,7 @@
         }
 
         // Function to handle a cell click
+        /** Handles cell click events. */
         function handleCellClick(event) {
             event.preventDefault(); // Prevents issues with double tap zoom or other default behaviors
             if (!gameActive) return;
@@ -248,6 +255,7 @@
         }
 
         // Function to make a move
+        /** Executes a move. */
         function makeMove(index, symbol, owner) {
             if (boardSymbols[index] === '' && gameActive) {
                 boardSymbols[index] = symbol;
@@ -269,6 +277,7 @@
         }
 
         // Function to switch player
+        /** Switches the current player. */
         function switchPlayer() {
             currentPlayer = currentPlayer === 'P1' ? 'P2' : 'P1';
             if (gameActive) {
@@ -277,6 +286,7 @@
         }
 
         // Function to check for a win
+        /** Checks for a win. */
         function checkWin(owner) {
             return winningConditions.some(condition => {
                 return condition.every(index => boardOwners[index] === owner);
@@ -284,6 +294,7 @@
         }
 
         // Function for the computer's move (AI)
+        /** AI move logic. */
         function computerMove() {
             if (!gameActive) return;
 
@@ -296,6 +307,7 @@
         }
 
         // Function to end the game
+        /** Ends the game. */
         function endGame(isTie, winner = null) {
             gameActive = false;
             if (isTie) {
@@ -316,21 +328,13 @@
             }
         }
         
+        /** Toggles board interactivity. */
         function toggleBoardInteraction(enable) {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                if (enable) {
-                    cell.style.pointerEvents = 'auto';
-                    cell.style.opacity = '1';
-                } else {
-                    cell.style.pointerEvents = 'none';
-                    cell.style.opacity = '0.7';
-                }
-            });
+            TicTacUtils.toggleBoardInteraction(enable);
         }
 
         // --- Event Listeners Setup ---
-        vsPlayerButton.addEventListener('click', () => {
+        if (vsPlayerButton) vsPlayerButton.addEventListener('click', () => {
             gameMode = '2P';
             currentPlayer = 'P1';
             modeSelectionDiv.classList.add('hidden');
@@ -338,7 +342,7 @@
             initializeGame();
         });
 
-        vsComputerButton.addEventListener('click', () => {
+        if (vsComputerButton) vsComputerButton.addEventListener('click', () => {
             gameMode = 'PvC';
             modeSelectionDiv.classList.add('hidden');
             gameAreaDiv.classList.remove('hidden');
@@ -346,7 +350,7 @@
             initializeGame();
         });
 
-        resetButton.addEventListener('click', () => {
+        if (resetButton) resetButton.addEventListener('click', () => {
             if (gameMode === 'PvC'){
                 currentPlayer = Math.random() < 0.5 ? 'P1' : 'P2';
             } else {
@@ -355,7 +359,7 @@
             initializeGame();
         });
         
-        changeModeButton.addEventListener('click', () => {
+        if (changeModeButton) changeModeButton.addEventListener('click', () => {
             gameAreaDiv.classList.add('hidden');
             modeSelectionDiv.classList.remove('hidden');
             statusElement.textContent = "";

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic-Tac-Toe: Decay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -81,6 +82,7 @@
     </div>
 
     <script>
+
         // DOM Elements
         const boardElement = document.getElementById('gameBoard');
         const statusArea = document.getElementById('statusArea');
@@ -140,6 +142,7 @@
          * Handles a click event on a game cell.
          * @param {Event} event - The click event.
          */
+        /** Handles cell click events. */
         function handleCellClick(event) {
             const clickedCell = event.target;
             const clickedCellIndex = parseInt(clickedCell.dataset.index);
@@ -214,6 +217,7 @@
          * Checks if the current player has won.
          * @returns {boolean} True if current player wins, false otherwise.
          */
+        /** Checks for a win. */
         function checkWin() {
             for (let i = 0; i < winningConditions.length; i++) {
                 const [a, b, c] = winningConditions[i];
@@ -232,6 +236,8 @@
 
         // Game State Variables (ensure these are accessible, they are global in the script)
         // board, currentPlayer, gameActive, playerPieces, winningConditions, MAX_PIECES_PER_PLAYER
+
+        /** AI move logic. */
 
         function computerMove() {
             if (!gameActive || currentPlayer !== 'O' || gameMode !== 'PvC') {
@@ -303,6 +309,8 @@
             }
         }
 
+        /** Toggles board interactivity. */
+
         function toggleBoardInteraction(enable) {
             Array.from(boardElement.children).forEach(cell => {
                 cell.style.pointerEvents = enable ? 'auto' : 'none';
@@ -372,6 +380,7 @@
          * Ends the game, displaying a win or draw message.
          * @param {boolean} isDraw - True if the game is a draw.
          */
+        /** Ends the game. */
         function endGame(isDraw) {
             gameActive = false;
             let message = '';
@@ -401,6 +410,7 @@
         /**
          * Initializes or resets the game to its initial state.
          */
+        /** Initializes or resets the game state and UI. */
         function initializeGame() {
             board = ['', '', '', '', '', '', '', '', ''];
             // currentPlayer is set by mode selection for PvC, or defaults to 'X'
@@ -473,14 +483,14 @@
         }
 
         // Event Listeners
-        vsPlayerButton.addEventListener('click', () => {
+        if (vsPlayerButton) vsPlayerButton.addEventListener('click', () => {
             gameMode = '2P';
             modeSelectionDiv.classList.add('hidden');
             gameAreaDiv.classList.remove('hidden');
             initializeGame();
         });
 
-        vsComputerButton.addEventListener('click', () => {
+        if (vsComputerButton) vsComputerButton.addEventListener('click', () => {
             gameMode = 'PvC';
             // For PvC, decide who starts. Player X for now.
             currentPlayer = 'X';
@@ -489,15 +499,15 @@
             initializeGame();
         });
 
-        changeModeButton.addEventListener('click', () => {
+        if (changeModeButton) changeModeButton.addEventListener('click', () => {
             gameAreaDiv.classList.add('hidden');
             modeSelectionDiv.classList.remove('hidden');
             statusArea.textContent = ""; // Clear status
             hideModalMessage();
         });
 
-        resetButton.addEventListener('click', initializeGame);
-        modalCloseButton.addEventListener('click', () => {
+        if (resetButton) resetButton.addEventListener('click', initializeGame);
+        if (modalCloseButton) modalCloseButton.addEventListener('click', () => {
             // When modal "Play Again" is clicked, hide modal and reset game
             hideModalMessage();
             initializeGame();

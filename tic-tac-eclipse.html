@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Eclipse</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -94,6 +95,7 @@
     </main>
 
     <script>
+
         const boardElement = document.getElementById('board');
         const statusElement = document.getElementById('status');
         const hintElement = document.getElementById('hint');
@@ -172,6 +174,8 @@
             renderBoard();
         }
 
+        /** Renders the board to the DOM. */
+
         function renderBoard() {
             Array.from(boardElement.children).forEach((cell, index) => {
                 cell.textContent = board[index];
@@ -208,6 +212,8 @@
             }, 2000);
         }
 
+        /** Checks for a win. */
+
         function checkWin() {
             return winningLines.some(line => {
                 const [a, b, c] = line;
@@ -236,7 +242,7 @@
             handleMove(4);
         }
 
-        resetButton.addEventListener('click', resetGame);
+        if (resetButton) resetButton.addEventListener('click', resetGame);
         centerButton.addEventListener('click', playCenterStart);
 
         buildBoard();

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Trivia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -55,6 +56,7 @@
     <div id="gameBoard" class="grid grid-cols-3 gap-2 mb-4"></div>
     <button id="resetButton" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded mb-6">Reset Game</button>
     <script>
+
         const gameBoardElement = document.getElementById('gameBoard');
         const statusElement = document.getElementById('status');
         const resetButton = document.getElementById('resetButton');
@@ -82,6 +84,8 @@
             {q: 'What do bees make?', a: 'honey'}
         ];
 
+        /** Initializes or resets the game state and UI. */
+
         function initializeGame() {
             board = Array(9).fill('');
             gameActive = true;
@@ -106,6 +110,8 @@
             return answer !== null && answer.trim().toLowerCase() === q.a.toLowerCase();
         }
 
+        /** Handles cell click events. */
+
         function handleCellClick(event) {
             if (!gameActive) return;
             const index = parseInt(event.currentTarget.dataset.index);
@@ -117,6 +123,8 @@
             }
             makeMove(index, currentPlayer);
         }
+
+        /** Executes a move. */
 
         function makeMove(index, player) {
             board[index] = player;
@@ -134,6 +142,8 @@
             }
         }
 
+        /** Switches the current player. */
+
         function switchPlayer() {
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             if (gameActive) {
@@ -141,11 +151,13 @@
             }
         }
 
+        /** Checks for a win. */
+
         function checkWin(player) {
             return winningConditions.some(cond => cond.every(idx => board[idx] === player));
         }
 
-        resetButton.addEventListener('click', initializeGame);
+        if (resetButton) resetButton.addEventListener('click', initializeGame);
         initializeGame();
     </script>
     <div class="mt-auto text-center">

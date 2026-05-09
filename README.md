@@ -1,54 +1,32 @@
-
 # Tic Tac Pro - The Ultimate Tic Tac Toe Collection
 
-Welcome to Tic Tac Pro, a collection of classic and innovative Tic Tac Toe game variations!
+Welcome to **Tic Tac Pro**, a comprehensive and polished collection of Tic Tac Toe game variations, ranging from the classic 3x3 grid to innovative, mind-bending twists.
 
-**Play the game collection live at: [https://sounny.github.io/tictacpro/](https://sounny.github.io/tictacpro/)**
+![Tic Tac Pro Screenshot Placeholder](screenshot-placeholder.png)
 
-## About This Project
+## 🌟 Features
 
-This project aims to explore different ways to play the simple game of Tic Tac Toe, introducing new rules, mechanics, and challenges to make it more engaging and fun. Each game is implemented as a standalone HTML page with its own JavaScript logic.
+*   **Diverse Game Modes:** Over 40 unique variations of Tic Tac Toe.
+*   **Play Against AI:** Most games support a "vs Computer" mode with smart AI.
+*   **Local Multiplayer:** Challenge your friends in 2-player mode on the same device.
+*   **Responsive Design:** Optimized for both desktop and mobile play using Tailwind CSS.
+*   **Interactive UI:** Smooth transitions, modals for game results, and accessible controls.
+*   **Unique Mechanics:** Experience gravity, decay, swaps, portals, quantum moves, and more!
 
-## Game Variations
+## 🎮 How to Play
 
-Here are the Tic Tac Toe variations currently available:
+1.  **Select a Game:** Choose from the wide variety of games on the [home page](https://sounny.github.io/tictacpro/).
+2.  **Choose Mode:** Select "2 Players" to play with a friend locally, or "vs Computer" to challenge the AI.
+3.  **Make Your Move:** Click or tap on an empty cell to place your mark.
+4.  **Win the Game:** Each game has its own winning condition (usually 3 or more in a row), but be sure to read the specific rules for each variation!
+5.  **Reset/Change Mode:** Use the buttons below the game board to restart the match or return to mode selection.
 
-*   **Tic Tac Classic (`tic-tac-classic.html`)**
-    *   The timeless game of X's and O's on a 3x3 grid. Supports 2-player and vs-Computer modes.
+## 🛠️ Tech Stack
 
-*   **Tic-Tac-Decay (`tic-tac-decay.html`)**
-    *   A challenging twist where your oldest piece disappears if you have more than 3 pieces on the board! Think ahead to win.
-
-*   **Tic-Tac-Swap (`tic-tac-swap.html`)**
-    *   A mind-bending version where, once per game, you can swap any two pieces on the board! Outmaneuver your opponent with strategic swaps.
-
-*   **Tic-Tac-Gravity (`tic-tac-gravity.html`)**
-    *   Experience Tic Tac Toe with a twist! Pieces fall to the lowest available spot in a column, changing your strategy entirely.
-
-*   **Tic-Tac-Push (`tic-tac-push.html`)**
-    *   A dynamic Tic Tac Toe where placing your piece can push your opponent's adjacent pieces into an empty space behind them. Strategic shoves win the day.
-
-*   **Tic-Tac-Bomb (`tic-tac-bomb.html`)**
-    *   Strategically clear sections of the board! Each player gets one bomb per game to detonate a 3x3 area. Use it wisely!
-
-*   **Tic Tac Four (`tic-tac-four.html`)**
-    *   A bigger challenge! Play on a 4x4 grid and be the first to get four of your marks in a row.
-
-*   **Tic Tac Five (`tic-tac-five.html`)**
-    *   An even larger 5x5 board. Get five in a row to win!
-
-*   **Tic Tac Toroid (`tic-tac-toroid.html`)**
-    *   A toroidal board where lines wrap around the edges for unexpected winning combinations.
-
-## How to Play
-
-1.  Visit the live game catalog link above.
-2.  Click on the "Play" button for the game variation you wish to try.
-3.  Each game page includes instructions or implies rules through its interface.
-
-## Contributing
-
-While this project was primarily developed by an AI assistant, ideas and contributions for new game modes or improvements are conceptually welcome. (Standard contribution guidelines would typically follow here if it were a human-managed public project).
+*   **HTML5:** Structured with semantic elements.
+*   **CSS3 & Tailwind CSS:** Modern styling and responsive layouts.
+*   **JavaScript (Vanilla JS):** Core game logic, AI, and DOM manipulation.
+*   **JSDoc:** Thoroughly documented codebase for better maintainability.
 
 ---
-Enjoy playing!
+Made with ❤️ by [Sounny](https://sounny.github.io)

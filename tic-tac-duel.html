@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Duel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -84,6 +85,7 @@
         </div>
     </div>
 <script>
+
 const gameBoardElement = document.getElementById('gameBoard');
 const statusElement = document.getElementById('status');
 const resetButton = document.getElementById('resetButton');
@@ -110,13 +112,18 @@ const winningConditions = [
     [0,4,8],[2,4,6]
 ];
 
+/** Shows the outcome modal. */
+
 function showModal(message){
     modalMessageElement.textContent = message;
     messageModal.style.display = 'flex';
 }
-function closeModal(){ messageModal.style.display = 'none'; }
-modalCloseButton.addEventListener('click', closeModal);
+/** Closes the outcome modal. */
+function closeModal(){ TicTacUtils.closeModal(messageModal); }
+if (modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
 window.addEventListener('click', e => { if(e.target===messageModal) closeModal(); });
+
+/** Initializes or resets the game state and UI. */
 
 function initializeGame(){
     board = ['', '', '', '', '', '', '', '', ''];
@@ -131,6 +138,8 @@ function initializeGame(){
         statusElement.textContent = 'Player 1, choose a square';
     }
 }
+
+/** Renders the board to the DOM. */
 
 function renderBoard(){
     gameBoardElement.innerHTML = '';
@@ -149,6 +158,8 @@ function renderBoard(){
         gameBoardElement.appendChild(cell);
     });
 }
+
+/** Handles cell click events. */
 
 function handleCellClick(e){
     e.preventDefault();
@@ -212,6 +223,8 @@ function startNextRound(){
     statusElement.textContent = gameMode === 'PvC' ? 'Your turn: choose a square' : 'Player 1, choose a square';
 }
 
+/** Checks for a win. */
+
 function checkWin(player){
     return winningConditions.some(c => c.every(i => board[i] === player));
 }
@@ -224,6 +237,8 @@ function computerSelect(){
     }
     selectionP2 = available[Math.floor(Math.random()*available.length)];
 }
+
+/** Ends the game. */
 
 function endGame(tie, winner=null){
     gameActive = false;
@@ -242,6 +257,8 @@ function endGame(tie, winner=null){
     }
 }
 
+/** Toggles board interactivity. */
+
 function toggleBoardInteraction(enable){
     const cells = document.querySelectorAll('.cell');
     cells.forEach(c => {
@@ -255,25 +272,25 @@ function toggleBoardInteraction(enable){
     });
 }
 
-vsPlayerButton.addEventListener('click', () => {
+if (vsPlayerButton) vsPlayerButton.addEventListener('click', () => {
     gameMode = '2P';
     modeSelectionDiv.classList.add('hidden');
     gameAreaDiv.classList.remove('hidden');
     initializeGame();
 });
 
-vsComputerButton.addEventListener('click', () => {
+if (vsComputerButton) vsComputerButton.addEventListener('click', () => {
     gameMode = 'PvC';
     modeSelectionDiv.classList.add('hidden');
     gameAreaDiv.classList.remove('hidden');
     initializeGame();
 });
 
-resetButton.addEventListener('click', () => {
+if (resetButton) resetButton.addEventListener('click', () => {
     initializeGame();
 });
 
-changeModeButton.addEventListener('click', () => {
+if (changeModeButton) changeModeButton.addEventListener('click', () => {
     gameAreaDiv.classList.add('hidden');
     modeSelectionDiv.classList.remove('hidden');
     statusElement.textContent = '';

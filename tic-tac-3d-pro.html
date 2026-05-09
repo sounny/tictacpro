@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Toe 3D Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -153,6 +154,9 @@ function flashCube(cube, highlight) {
 }
 
 
+/** Executes a move. */
+
+
 function makeMove(index, cube) {
     board[index] = currentPlayer;
     const color = currentPlayer === 'X' ? 'rgba(248,113,113,0.8)' : 'rgba(96,165,250,0.8)';
@@ -172,6 +176,8 @@ function makeMove(index, cube) {
         document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
     }
 }
+
+/** Checks for a win. */
 
 function checkWin(player) {
     return winningConditions.some(cond => cond.every(i => board[i] === player));

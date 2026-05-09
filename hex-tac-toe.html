@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Hex Tac Toe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -68,6 +69,12 @@
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">Return to Menu</a>
     </div>
 <script>
+    // Global error handling for debugging
+    window.onerror = function(message, source, lineno, colno, error) {
+        console.error("Global error caught:", message, "at", source, ":", lineno);
+        return false;
+    };
+
 const boardElement = document.getElementById('board');
 const statusElement = document.getElementById('status');
 const gameArea = document.getElementById('gameArea');
@@ -88,6 +95,8 @@ const winningConditions = [
     [0,4,8], [2,4,6]
 ];
 
+/** Renders the board to the DOM. */
+
 function renderBoard(){
     boardElement.innerHTML='';
     board.forEach((mark, idx) => {
@@ -101,6 +110,8 @@ function renderBoard(){
         boardElement.appendChild(cell);
     });
 }
+
+/** Handles cell click events. */
 
 function handleCellClick(e){
     if(!gameActive) return;
@@ -123,6 +134,8 @@ function handleCellClick(e){
     }
 }
 
+/** Switches the current player. */
+
 function switchPlayer(){
     currentPlayer = currentPlayer==='X' ? 'O' : 'X';
     if(gameActive){
@@ -130,9 +143,13 @@ function switchPlayer(){
     }
 }
 
+/** Checks for a win. */
+
 function checkWin(player){
     return winningConditions.some(c => c.every(i => board[i]===player));
 }
+
+/** AI move logic. */
 
 function computerMove(){
     if(!gameActive) return;
@@ -159,6 +176,8 @@ function computerMove(){
     if(board.every(c=>c!=='')){ endGame(true); return; }
     switchPlayer();
 }
+
+/** Ends the game. */
 
 function endGame(tie,winner){
     gameActive=false;

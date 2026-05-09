@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Fog</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -50,6 +51,7 @@
         </div>
     </div>
     <script>
+
         const gameBoardElement = document.getElementById('gameBoard');
         const statusElement = document.getElementById('status');
         const resetButton = document.getElementById('resetButton');
@@ -73,10 +75,15 @@
             [0,4,8],[2,4,6]
         ];
 
+        /** Shows the outcome modal. */
+
         function showModal(message){ modalMessageElement.textContent = message; messageModal.style.display='flex'; }
+        /** Closes the outcome modal. */
         function closeModal(){ messageModal.style.display='none'; }
-        modalCloseButton.addEventListener('click', closeModal);
+        if (modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
         window.addEventListener('click',e=>{ if(e.target===messageModal) closeModal(); });
+
+        /** Initializes or resets the game state and UI. */
 
         function initializeGame(){
             board = ['', '', '', '', '', '', '', '', ''];
@@ -89,6 +96,8 @@
                 setTimeout(()=>{ computerMove(); toggleBoardInteraction(true); },700);
             }
         }
+
+        /** Renders the board to the DOM. */
 
         function renderBoard(initial=false){
             gameBoardElement.innerHTML='';
@@ -111,6 +120,8 @@
             });
         }
 
+        /** Handles cell click events. */
+
         function handleCellClick(event){
             event.preventDefault();
             if(!gameActive) return;
@@ -125,20 +136,30 @@
             }
         }
 
+        /** Executes a move. */
+
         function makeMove(index,player){
             board[index]=player;
             renderBoard();
             if(checkWin(player)) endGame(false,player); else if(board.every(c=>c!=='')) endGame(true); else switchPlayer();
         }
 
+        /** Switches the current player. */
+
         function switchPlayer(){
             currentPlayer=currentPlayer==='X'?'O':'X';
             if(gameActive) statusElement.textContent=`${gameMode==='PvC'&&currentPlayer==='O'?"Computer's (O)":"Player "+currentPlayer}'s turn`;
         }
 
+        /** Checks for a win. */
+
         function checkWin(player){ return winningConditions.some(cond=>cond.every(i=>board[i]===player)); }
 
+        /** AI move logic. */
+
         function computerMove(){ if(!gameActive) return; const empties=board.map((v,i)=>v===''?i:null).filter(v=>v!==null); const choice=empties[Math.floor(Math.random()*empties.length)]; if(choice!==undefined) makeMove(choice,'O'); }
+
+        /** Ends the game. */
 
         function endGame(tie,winner=null){
             gameActive=false;
@@ -147,12 +168,14 @@
             renderBoard(true);
         }
 
+        /** Toggles board interactivity. */
+
         function toggleBoardInteraction(enable){ const cells=document.querySelectorAll('.cell'); cells.forEach(c=>{c.style.pointerEvents=enable?'auto':'none';}); }
 
-        vsPlayerButton.addEventListener('click',()=>{ gameMode='2P'; currentPlayer='X'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
-        vsComputerButton.addEventListener('click',()=>{ gameMode='PvC'; currentPlayer=Math.random()<0.5?'X':'O'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
-        resetButton.addEventListener('click',()=>{ if(gameMode==='PvC') currentPlayer=Math.random()<0.5?'X':'O'; else currentPlayer='X'; initializeGame(); });
-        changeModeButton.addEventListener('click',()=>{ gameAreaDiv.classList.add('hidden'); modeSelectionDiv.classList.remove('hidden'); statusElement.textContent=''; gameActive=false; });
+        if (vsPlayerButton) vsPlayerButton.addEventListener('click',()=>{ gameMode='2P'; currentPlayer='X'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
+        if (vsComputerButton) vsComputerButton.addEventListener('click',()=>{ gameMode='PvC'; currentPlayer=Math.random()<0.5?'X':'O'; modeSelectionDiv.classList.add('hidden'); gameAreaDiv.classList.remove('hidden'); initializeGame(); });
+        if (resetButton) resetButton.addEventListener('click',()=>{ if(gameMode==='PvC') currentPlayer=Math.random()<0.5?'X':'O'; else currentPlayer='X'; initializeGame(); });
+        if (changeModeButton) changeModeButton.addEventListener('click',()=>{ gameAreaDiv.classList.add('hidden'); modeSelectionDiv.classList.remove('hidden'); statusElement.textContent=''; gameActive=false; });
 
         gameBoardElement.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){const a=document.activeElement; if(a&&a.classList.contains('cell')){handleCellClick({currentTarget:a,preventDefault:()=>{}});}}});
 

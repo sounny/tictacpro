@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/utils.js"></script>
     <title>Tic Tac Blind</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -129,6 +130,7 @@
     </div>
 
     <script>
+
         // DOM Elements
         const gameBoardElement = document.getElementById('gameBoard');
         const statusElement = document.getElementById('status');
@@ -159,15 +161,17 @@
         ];
 
         // --- Modal Functions ---
+        /** Shows the outcome modal. */
         function showModal(message) {
-            modalMessageElement.textContent = message;
-            messageModal.style.display = 'flex';
+            TicTacUtils.showModal(message, messageModal, modalMessageElement);
             clearTimeout(hideTimeoutId); // Cancel any pending hide operations
             revealAllMarks(true); // Reveal board when modal shows, and ensure it stays revealed
         }
 
+        /** Closes the outcome modal. */
+
         function closeModal() {
-            messageModal.style.display = 'none';
+            TicTacUtils.closeModal(messageModal);
             if (gameActive) { // If game is still active, hide marks again after a delay
                 brieflyShowThenHideAll();
             } else { // If game ended, keep showing marks
@@ -175,7 +179,7 @@
             }
         }
 
-        modalCloseButton.addEventListener('click', closeModal);
+        if (modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
         window.addEventListener('click', (event) => {
             if (event.target === messageModal) {
                 closeModal();
@@ -183,6 +187,7 @@
         });
 
         // --- Game Logic Functions ---
+        /** Initializes or resets the game state and UI. */
         function initializeGame() {
             board = ['', '', '', '', '', '', '', '', ''];
             gameActive = true;
@@ -205,6 +210,7 @@
         }
 
         // Function to render the board on the UI
+        /** Renders the board to the DOM. */
         function renderBoard() {
             gameBoardElement.innerHTML = '';
             board.forEach((mark, index) => {
@@ -262,6 +268,8 @@
             revealAllMarks(false); // Reveal and then schedule to hide
         }
 
+        /** Handles cell click events. */
+
         function handleCellClick(event) {
             event.preventDefault();
             clearTimeout(hideTimeoutId); // Player is interacting, stop any pending hide
@@ -311,6 +319,8 @@
             }
         }
 
+        /** Executes a move. */
+
         function makeMove(index, player) {
             if (board[index] === '' && gameActive) {
                 board[index] = player;
@@ -333,6 +343,8 @@
             }
         }
 
+        /** Switches the current player. */
+
         function switchPlayer() {
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             if (gameActive) {
@@ -340,11 +352,12 @@
             }
         }
 
+        /** Checks for a win. */
         function checkWin(player) {
-            return winningConditions.some(condition => {
-                return condition.every(index => board[index] === player);
-            });
+            return TicTacUtils.checkWin(board, winningConditions, player);
         }
+
+        /** AI move logic. */
 
         function computerMove() {
             if (!gameActive) return;
@@ -397,6 +410,8 @@
             }
         }
 
+        /** Ends the game. */
+
         function endGame(isTie, winner = null) {
             gameActive = false;
             clearTimeout(hideTimeoutId); // Cancel any pending hide operations
@@ -424,20 +439,12 @@
             }
         }
 
+        /** Toggles board interactivity. */
         function toggleBoardInteraction(enable) {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                if (enable) {
-                    cell.style.pointerEvents = 'auto';
-                    cell.style.opacity = '1';
-                } else {
-                    cell.style.pointerEvents = 'none';
-                    cell.style.opacity = '0.7';
-                }
-            });
+            TicTacUtils.toggleBoardInteraction(enable);
         }
 
-        vsPlayerButton.addEventListener('click', () => {
+        if (vsPlayerButton) vsPlayerButton.addEventListener('click', () => {
             gameMode = '2P';
             currentPlayer = 'X';
             modeSelectionDiv.classList.add('hidden');
@@ -446,7 +453,7 @@
             // brieflyShowThenHideAll(); // Called by initializeGame
         });
 
-        vsComputerButton.addEventListener('click', () => {
+        if (vsComputerButton) vsComputerButton.addEventListener('click', () => {
             gameMode = 'PvC';
             modeSelectionDiv.classList.add('hidden');
             gameAreaDiv.classList.remove('hidden');
@@ -455,7 +462,7 @@
             // brieflyShowThenHideAll(); // Called by initializeGame
         });
 
-        resetButton.addEventListener('click', () => {
+        if (resetButton) resetButton.addEventListener('click', () => {
             clearTimeout(hideTimeoutId); // Clear any pending hide before reset
             if (gameMode === 'PvC'){
                 currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
@@ -466,7 +473,7 @@
             // brieflyShowThenHideAll(); // Called by initializeGame
         });
 
-        changeModeButton.addEventListener('click', () => {
+        if (changeModeButton) changeModeButton.addEventListener('click', () => {
             clearTimeout(hideTimeoutId);
             gameAreaDiv.classList.add('hidden');
             modeSelectionDiv.classList.remove('hidden');
