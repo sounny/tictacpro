@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Magnet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+        .cell:hover {
+            background-color: #334155;
+        }
+        .piece {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+        .piece.x { color: #22d3ee; }
+        .piece.o { color: #f472b6; }
+
+        .polarity {
+            font-size: 0.8rem;
+            margin-top: -5px;
+        }
+
+        .polarity-plus { color: #4ade80; }
+        .polarity-minus { color: #f87171; }
+
+        @media (max-width: 600px) {
+            .cell { width: 65px; height: 65px; font-size: 1.5rem; }
+        }
+        @media (max-width: 400px) {
+            .cell { width: 55px; height: 55px; font-size: 1.25rem; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: #cbd5e1;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 400px;
+            text-align: left;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">Tic Tac Magnet</h1>
+        <div class="flex justify-center mb-4">
+            <button id="rulesBtn" class="text-slate-400 hover:text-cyan-400 text-sm flex items-center gap-1 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                How to Play
+            </button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-4 text-slate-300 font-semibold">Choose Game Mode</h2>
+            <div class="flex flex-col gap-3">
+                <button id="vsPlayer" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition all duration-200 transform hover:scale-105">Local 2 Players</button>
+                <button id="vsComputer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition all duration-200 transform hover:scale-105">Versus Computer</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <div id="playerXStatus" class="flex flex-col items-center p-2 rounded-lg border-2 border-transparent transition-all">
+                    <span class="text-2xl font-bold text-cyan-400">X</span>
+                    <span id="xNextPolarity" class="text-xs font-mono">Next: +</span>
+                </div>
+                <div class="text-center">
+                    <p id="status" class="text-lg font-medium text-slate-300">Player X's Turn</p>
+                </div>
+                <div id="playerOStatus" class="flex flex-col items-center p-2 rounded-lg border-2 border-transparent transition-all">
+                    <span class="text-2xl font-bold text-pink-400">O</span>
+                    <span id="oNextPolarity" class="text-xs font-mono">Next: +</span>
+                </div>
+            </div>
+
+            <div id="gameBoard" class="grid grid-cols-4 gap-2 mx-auto bg-slate-700 p-2 rounded-lg shadow-inner relative" style="width: fit-content; perspective: 1000px;">
+                <!-- Cells will be generated here -->
+            </div>
+
+            <div class="flex justify-center space-x-3 mt-8">
+                 <button id="resetButton" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-150">Reset</button>
+                 <button id="changeModeButton" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-150">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-400">Magnetic Rules</h2>
+            <ul class="space-y-3 text-slate-300">
+                <li class="flex gap-2">
+                    <span class="text-cyan-500 font-bold">•</span>
+                    <span><strong>4x4 Grid:</strong> Get 4 of your pieces in a row to win.</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-cyan-500 font-bold">•</span>
+                    <span><strong>Polarity:</strong> Pieces alternate between <span class="text-green-400 font-bold">+</span> and <span class="text-red-400 font-bold">-</span> every turn.</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-cyan-500 font-bold">•</span>
+                    <span><strong>Repel:</strong> Placing a piece pushes adjacent pieces of the <strong>same</strong> polarity away by one cell.</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-cyan-500 font-bold">•</span>
+                    <span><strong>Attract:</strong> Placing a piece pulls non-adjacent pieces of the <strong>opposite</strong> polarity one cell closer.</span>
+                </li>
+            </ul>
+            <button id="closeRules" class="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-2xl font-bold mb-6"></p>
+            <button id="modalCloseButton" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+
+        const rulesBtn = document.getElementById('rulesBtn');
+        const rulesModal = document.getElementById('rulesModal');
+        const closeRules = document.getElementById('closeRules');
+
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        const xNextPolarityText = document.getElementById('xNextPolarity');
+        const oNextPolarityText = document.getElementById('oNextPolarity');
+        const playerXStatus = document.getElementById('playerXStatus');
+        const playerOStatus = document.getElementById('playerOStatus');
+
+        // Game State
+        let board = Array(16).fill(null); // Each element: { player: 'X'|'O', polarity: '+'|'-' }
+        let currentPlayer = 'X';
+        let xTurnCount = 0;
+        let oTurnCount = 0;
+        let gameActive = true;
+        let gameMode = '2P';
+
+        const winningConditions = [
+            [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], // Rows
+            [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15], // Cols
+            [0, 5, 10, 15], [3, 6, 9, 12]                                 // Diagonals
+        ];
+
+        // --- UI Functions ---
+        function updateTurnIndicators() {
+            const xPol = xTurnCount % 2 === 0 ? '+' : '-';
+            const oPol = oTurnCount % 2 === 0 ? '+' : '-';
+            xNextPolarityText.textContent = `Next: ${xPol}`;
+            oNextPolarityText.textContent = `Next: ${oPol}`;
+
+            playerXStatus.classList.toggle('border-cyan-500', currentPlayer === 'X');
+            playerXStatus.classList.toggle('bg-slate-700', currentPlayer === 'X');
+            playerOStatus.classList.toggle('border-pink-500', currentPlayer === 'O');
+            playerOStatus.classList.toggle('bg-slate-700', currentPlayer === 'O');
+        }
+
+        function initializeGame() {
+            board = Array(16).fill(null);
+            currentPlayer = 'X';
+            xTurnCount = 0;
+            oTurnCount = 0;
+            gameActive = true;
+            statusElement.textContent = "Player X's Turn";
+            createBoard();
+            updateTurnIndicators();
+        }
+
+        function createBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-md');
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleCellClick(i));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function renderPieces() {
+            // We use a more dynamic approach for pieces to allow animations
+            const existingPieces = gameBoardElement.querySelectorAll('.piece');
+            const piecesOnBoard = new Set();
+
+            board.forEach((data, index) => {
+                if (!data) return;
+                piecesOnBoard.add(data.id);
+                let pieceEl = document.getElementById(data.id);
+
+                if (!pieceEl) {
+                    pieceEl = document.createElement('div');
+                    pieceEl.id = data.id;
+                    pieceEl.className = `piece ${data.player.toLowerCase()}`;
+                    pieceEl.innerHTML = `
+                        <span>${data.player}</span>
+                        <span class="polarity ${data.polarity === '+' ? 'polarity-plus' : 'polarity-minus'}">${data.polarity}</span>
+                    `;
+                    gameBoardElement.appendChild(pieceEl);
+                }
+
+                // Update position
+                const row = Math.floor(index / 4);
+                const col = index % 4;
+                // Standard cell is 80px + 8px gap
+                // In CSS we use grid, so it's better to just move it to the cell's position
+                const cell = gameBoardElement.children[index];
+                pieceEl.style.left = cell.offsetLeft + 'px';
+                pieceEl.style.top = cell.offsetTop + 'px';
+                pieceEl.style.width = cell.offsetWidth + 'px';
+                pieceEl.style.height = cell.offsetHeight + 'px';
+            });
+
+            // Remove pieces no longer on board (if any were pushed off? No, pieces stay on board but move)
+            existingPieces.forEach(p => {
+                if (!piecesOnBoard.has(p.id)) p.remove();
+            });
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive || board[index] || (gameMode === 'PvC' && currentPlayer === 'O')) return;
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            const polarity = currentPlayer === 'X' ? (xTurnCount % 2 === 0 ? '+' : '-') : (oTurnCount % 2 === 0 ? '+' : '-');
+            const pieceId = `piece-${Date.now()}-${index}`;
+
+            board[index] = { player: currentPlayer, polarity, id: pieceId };
+
+            if (currentPlayer === 'X') xTurnCount++;
+            else oTurnCount++;
+
+            applyMagneticEffects(index, polarity);
+            renderPieces();
+
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer + " Wins!");
+            } else if (board.every(cell => cell !== null)) {
+                endGame("It's a Tie!");
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                statusElement.textContent = (gameMode === 'PvC' && currentPlayer === 'O' ? "Computer Thinking..." : `Player ${currentPlayer}'s Turn`);
+                updateTurnIndicators();
+
+                if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                    setTimeout(computerMove, 800);
+                }
+            }
+        }
+
+        function applyMagneticEffects(placedIndex, placedPolarity) {
+            const r = Math.floor(placedIndex / 4);
+            const c = placedIndex % 4;
+
+            const newBoard = [...board];
+
+            // 1. Repel (Same polarity, adjacent)
+            const neighbors = [
+                { r: r - 1, c, dr: -1, dc: 0 },
+                { r: r + 1, c, dr: 1, dc: 0 },
+                { r, c: c - 1, dr: 0, dc: -1 },
+                { r, c: c + 1, dr: 0, dc: 1 }
+            ];
+
+            neighbors.forEach(n => {
+                if (n.r >= 0 && n.r < 4 && n.c >= 0 && n.c < 4) {
+                    const idx = n.r * 4 + n.c;
+                    const neighborPiece = newBoard[idx];
+                    if (neighborPiece && neighborPiece.polarity === placedPolarity) {
+                        // Try to push
+                        const targetR = n.r + n.dr;
+                        const targetC = n.c + n.dc;
+                        if (targetR >= 0 && targetR < 4 && targetC >= 0 && targetC < 4) {
+                            const targetIdx = targetR * 4 + targetC;
+                            if (!newBoard[targetIdx]) {
+                                newBoard[targetIdx] = neighborPiece;
+                                newBoard[idx] = null;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Attract (Opposite polarity, same row/column, distance > 1)
+            // For each direction, find the first piece. If it's opposite polarity, pull it closer if space available.
+            const directions = [
+                { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
+            ];
+
+            directions.forEach(d => {
+                // Look beyond adjacent cell
+                for (let dist = 2; dist < 4; dist++) {
+                    const targetR = r + d.dr * dist;
+                    const targetC = c + d.dc * dist;
+
+                    if (targetR >= 0 && targetR < 4 && targetC >= 0 && targetC < 4) {
+                        const idx = targetR * 4 + targetC;
+                        const piece = newBoard[idx];
+                        if (piece) {
+                            if (piece.polarity !== placedPolarity) {
+                                // Try to pull one cell closer to placed piece
+                                const closerR = targetR - d.dr;
+                                const closerC = targetC - d.dc;
+                                const closerIdx = closerR * 4 + closerC;
+                                if (!newBoard[closerIdx]) {
+                                    newBoard[closerIdx] = piece;
+                                    newBoard[idx] = null;
+                                }
+                            }
+                            break; // Only the first piece in each direction is affected
+                        }
+                    } else break;
+                }
+            });
+
+            board = newBoard;
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] && board[index].player === player);
+            });
+        }
+
+        function endGame(message) {
+            gameActive = false;
+            statusElement.textContent = message;
+            modalMessageElement.textContent = message;
+            setTimeout(() => {
+                messageModal.style.display = 'flex';
+            }, 600);
+        }
+
+        // --- AI Logic ---
+        function computerMove() {
+            if (!gameActive) return;
+
+            // Basic AI: Prioritize winning, then blocking, then random
+            const availableMoves = board.map((c, i) => c === null ? i : null).filter(i => i !== null);
+            if (availableMoves.length === 0) return;
+
+            let move = -1;
+
+            // 1. Can I win?
+            for (let m of availableMoves) {
+                if (simulateAndCheckWin(m, 'O')) {
+                    move = m;
+                    break;
+                }
+            }
+
+            // 2. Can player win? Block them
+            if (move === -1) {
+                for (let m of availableMoves) {
+                    if (simulateAndCheckWin(m, 'X')) {
+                        move = m;
+                        break;
+                    }
+                }
+            }
+
+            // 3. Strategic: Try center-ish
+            if (move === -1) {
+                const strategic = [5, 6, 9, 10, 0, 3, 12, 15].filter(i => availableMoves.includes(i));
+                if (strategic.length > 0) move = strategic[Math.floor(Math.random() * strategic.length)];
+            }
+
+            // 4. Random
+            if (move === -1) {
+                move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            }
+
+            makeMove(move);
+        }
+
+        function simulateAndCheckWin(index, player) {
+            const originalBoard = JSON.parse(JSON.stringify(board));
+            const originalXCount = xTurnCount;
+            const originalOCount = oTurnCount;
+
+            const polarity = player === 'X' ? (xTurnCount % 2 === 0 ? '+' : '-') : (oTurnCount % 2 === 0 ? '+' : '-');
+            board[index] = { player, polarity, id: 'temp' };
+            applyMagneticEffects(index, polarity);
+            const isWin = checkWin(player);
+
+            board = originalBoard;
+            xTurnCount = originalXCount;
+            oTurnCount = originalOCount;
+            return isWin;
+        }
+
+        // --- Event Listeners ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        resetButton.addEventListener('click', initializeGame);
+
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        modalCloseButton.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+            initializeGame();
+        });
+
+        rulesBtn.addEventListener('click', () => rulesModal.style.display = 'flex');
+        closeRules.addEventListener('click', () => rulesModal.style.display = 'none');
+        window.addEventListener('click', (e) => {
+            if (e.target === rulesModal) rulesModal.style.display = 'none';
+            if (e.target === messageModal) messageModal.style.display = 'none';
+        });
+
+        // Initial setup
+        window.addEventListener('resize', renderPieces);
+
+    </script>
+    <div class="mt-8 text-center">
+        <a href="index.html" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">Return to Menu</a>
+    </div>
+</body>
+</html>
