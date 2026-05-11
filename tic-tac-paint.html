@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Paint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        @media (min-width: 768px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+        }
+
+        .cell:hover:not(.solid-x):not(.solid-o) {
+            background-color: #334155;
+        }
+
+        /* Solid Cells */
+        .solid-x {
+            background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+            color: white;
+            cursor: default;
+        }
+
+        .solid-o {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+            cursor: default;
+        }
+
+        /* Faded Cells */
+        .faded-x {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(153, 27, 27, 0.3) 100%);
+            color: rgba(239, 68, 68, 0.6);
+        }
+
+        .faded-o {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(30, 64, 175, 0.3) 100%);
+            color: rgba(59, 130, 246, 0.6);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .score-box {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">
+            Tic Tac Paint
+        </h1>
+        <div class="flex justify-center mb-6">
+            <button id="showRules" class="text-slate-400 hover:text-white text-sm underline">How to Play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select AI Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button id="easyDiff" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Easy</button>
+                <button id="mediumDiff" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Hard</button>
+            </div>
+            <button id="backToMode" class="text-slate-400 hover:text-white mt-4 block mx-auto text-sm">← Back to Mode Selection</button>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div class="score-box flex-1 w-full md:w-auto text-center border-l-4 border-red-500">
+                    <p class="text-sm text-slate-400 uppercase tracking-wider">Player X</p>
+                    <p id="scoreX" class="text-3xl font-bold">0.0</p>
+                </div>
+                <div class="score-box flex-1 w-full md:w-auto text-center border-l-4 border-blue-500">
+                    <p class="text-sm text-slate-400 uppercase tracking-wider">Player O</p>
+                    <p id="scoreO" class="text-3xl font-bold">0.0</p>
+                </div>
+            </div>
+
+            <div id="gameBoard" class="grid grid-cols-5 gap-1 md:gap-2 mx-auto bg-slate-700 p-2 rounded-lg shadow-inner" style="width: fit-content;">
+                <!-- 25 cells generated by JS -->
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300 font-medium"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                <button id="resetButton" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Reset</button>
+                <button id="changeModeButton" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Change Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-pink-500">Rules of Tic Tac Paint</h2>
+            <ul class="text-left space-y-3 text-slate-300 mb-6">
+                <li class="flex items-start">
+                    <span class="text-pink-500 mr-2">•</span>
+                    <span>Game is played on a 5x5 grid.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-pink-500 mr-2">•</span>
+                    <span>Each turn, claim an <strong>empty</strong> or <strong>faded</strong> cell. It becomes a <strong>solid</strong> cell (1 point).</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-pink-500 mr-2">•</span>
+                    <span>Placing a solid cell also paints all orthogonally adjacent empty cells with your <strong>faded</strong> color (0.5 points).</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-pink-500 mr-2">•</span>
+                    <span>Solid cells are permanent. Faded cells can be overwritten.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-pink-500 mr-2">•</span>
+                    <span>Game ends when the board is full (no empty cells). Most points win!</span>
+                </li>
+            </ul>
+            <button id="closeRules" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-lg transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content text-center">
+            <h2 id="resultTitle" class="text-3xl font-bold mb-2">Game Over!</h2>
+            <p id="resultMessage" class="text-xl text-slate-300 mb-6"></p>
+            <button id="resultClose" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-lg transition">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let board = Array(25).fill(null); // { owner: 'X'|'O', type: 'solid'|'faded' }
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let gameMode = '2P';
+        let difficulty = 'medium';
+        let computerTimeout;
+
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const scoreXElement = document.getElementById('scoreX');
+        const scoreOElement = document.getElementById('scoreO');
+        const rulesModal = document.getElementById('rulesModal');
+        const resultModal = document.getElementById('resultModal');
+
+        // Initialize board
+        function createBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-md');
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleMove(i));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function updateUI() {
+            let scoreX = 0;
+            let scoreO = 0;
+
+            board.forEach((cellData, i) => {
+                const cellElement = gameBoardElement.children[i];
+                cellElement.className = 'cell rounded-md';
+                cellElement.textContent = '';
+
+                if (cellData) {
+                    if (cellData.type === 'solid') {
+                        cellElement.classList.add(cellData.owner === 'X' ? 'solid-x' : 'solid-o');
+                        cellElement.textContent = cellData.owner;
+                        if (cellData.owner === 'X') scoreX += 1; else scoreO += 1;
+                    } else {
+                        cellElement.classList.add(cellData.owner === 'X' ? 'faded-x' : 'faded-o');
+                        cellElement.textContent = cellData.owner;
+                        if (cellData.owner === 'X') scoreX += 0.5; else scoreO += 0.5;
+                    }
+                }
+            });
+
+            scoreXElement.textContent = scoreX.toFixed(1);
+            scoreOElement.textContent = scoreO.toFixed(1);
+
+            if (gameActive) {
+                const name = (gameMode === 'PvC' && currentPlayer === 'O') ? 'Computer' : `Player ${currentPlayer}`;
+                statusElement.textContent = `${name}'s Turn`;
+            }
+        }
+
+        function handleMove(index) {
+            if (!gameActive || (gameMode === 'PvC' && currentPlayer === 'O')) return;
+            if (board[index] && board[index].type === 'solid') return;
+
+            makeMove(index, currentPlayer);
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Computer is thinking...";
+                computerTimeout = setTimeout(aiMove, 600);
+            }
+        }
+
+        function makeMove(index, player) {
+            // Place solid cell
+            board[index] = { owner: player, type: 'solid' };
+
+            // Paint neighbors
+            const neighbors = getNeighbors(index);
+            neighbors.forEach(nIndex => {
+                // Only paint cells that are currently empty
+                if (!board[nIndex]) {
+                    board[nIndex] = { owner: player, type: 'faded' };
+                }
+            });
+
+            checkGameOver();
+            if (gameActive) {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            }
+            updateUI();
+        }
+
+        function getNeighbors(index) {
+            const neighbors = [];
+            const r = Math.floor(index / 5);
+            const c = index % 5;
+
+            if (r > 0) neighbors.push(index - 5);
+            if (r < 4) neighbors.push(index + 5);
+            if (c > 0) neighbors.push(index - 1);
+            if (c < 4) neighbors.push(index + 1);
+
+            return neighbors;
+        }
+
+        function checkGameOver() {
+            // Game ends when the board is full (no empty cells)
+            const full = board.every(cell => cell !== null);
+            if (full) {
+                gameActive = false;
+                const scoreX = calculateScore('X');
+                const scoreO = calculateScore('O');
+
+                let title = "It's a Draw!";
+                let message = `Both players tied with ${scoreX.toFixed(1)} points.`;
+
+                if (scoreX > scoreO) {
+                    title = gameMode === 'PvC' ? "You Won!" : "Player X Won!";
+                    message = `${gameMode === 'PvC' ? 'You' : 'Player X'} beat ${gameMode === 'PvC' ? 'the computer' : 'Player O'} ${scoreX.toFixed(1)} to ${scoreO.toFixed(1)}.`;
+                } else if (scoreO > scoreX) {
+                    title = gameMode === 'PvC' ? "Computer Won!" : "Player O Won!";
+                    message = `${gameMode === 'PvC' ? 'The computer' : 'Player O'} beat ${gameMode === 'PvC' ? 'you' : 'Player X'} ${scoreO.toFixed(1)} to ${scoreX.toFixed(1)}.`;
+                }
+
+                document.getElementById('resultTitle').textContent = title;
+                document.getElementById('resultMessage').textContent = message;
+                resultModal.style.display = 'flex';
+                statusElement.textContent = "Game Over";
+            }
+        }
+
+        function calculateScore(player) {
+            return board.reduce((acc, cell) => {
+                if (cell && cell.owner === player) {
+                    return acc + (cell.type === 'solid' ? 1 : 0.5);
+                }
+                return acc;
+            }, 0);
+        }
+
+        // --- AI Logic ---
+        function aiMove() {
+            let index;
+            if (difficulty === 'easy') {
+                index = getRandomMove();
+            } else if (difficulty === 'medium') {
+                index = getBestMove(1); // Shallow lookahead
+            } else {
+                index = getBestMove(3); // Deeper lookahead
+            }
+            makeMove(index, 'O');
+        }
+
+        function getRandomMove() {
+            const available = board.map((c, i) => (!c || c.type === 'faded') ? i : null).filter(i => i !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getBestMove(depth) {
+            const available = board.map((c, i) => (!c || c.type === 'faded') ? i : null).filter(i => i !== null);
+            let bestScore = -Infinity;
+            let bestMove = available[0];
+
+            available.forEach(move => {
+                const tempBoard = JSON.parse(JSON.stringify(board));
+                simulateMove(tempBoard, move, 'O');
+                const score = minimax(tempBoard, depth - 1, false, -Infinity, Infinity);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = move;
+                }
+            });
+
+            return bestMove;
+        }
+
+        function minimax(tempBoard, depth, isMaximizing, alpha, beta) {
+            const full = tempBoard.every(cell => cell !== null);
+            if (depth === 0 || full) {
+                return evaluateBoard(tempBoard);
+            }
+
+            const available = tempBoard.map((c, i) => (!c || c.type === 'faded') ? i : null).filter(i => i !== null);
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (const move of available) {
+                    const nextBoard = JSON.parse(JSON.stringify(tempBoard));
+                    simulateMove(nextBoard, move, 'O');
+                    const ev = minimax(nextBoard, depth - 1, false, alpha, beta);
+                    maxEval = Math.max(maxEval, ev);
+                    alpha = Math.max(alpha, ev);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of available) {
+                    const nextBoard = JSON.parse(JSON.stringify(tempBoard));
+                    simulateMove(nextBoard, move, 'X');
+                    const ev = minimax(nextBoard, depth - 1, true, alpha, beta);
+                    minEval = Math.min(minEval, ev);
+                    beta = Math.min(beta, ev);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function simulateMove(tBoard, index, player) {
+            tBoard[index] = { owner: player, type: 'solid' };
+
+            const r = Math.floor(index / 5);
+            const c = index % 5;
+            const ns = [];
+            if (r > 0) ns.push(index - 5);
+            if (r < 4) ns.push(index + 5);
+            if (c > 0) ns.push(index - 1);
+            if (c < 4) ns.push(index + 1);
+
+            ns.forEach(nIndex => {
+                if (!tBoard[nIndex]) {
+                    tBoard[nIndex] = { owner: player, type: 'faded' };
+                }
+            });
+        }
+
+        function evaluateBoard(tBoard) {
+            let scoreX = 0;
+            let scoreO = 0;
+            tBoard.forEach(cell => {
+                if (cell) {
+                    const val = cell.type === 'solid' ? 1 : 0.5;
+                    if (cell.owner === 'X') scoreX += val; else scoreO += val;
+                }
+            });
+            return scoreO - scoreX;
+        }
+
+        // --- Controls ---
+        document.getElementById('vsPlayer').addEventListener('click', () => {
+            gameMode = '2P';
+            startGame();
+        });
+
+        document.getElementById('vsComputer').addEventListener('click', () => {
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('difficultySelection').classList.remove('hidden');
+        });
+
+        document.getElementById('backToMode').addEventListener('click', () => {
+            document.getElementById('modeSelection').classList.remove('hidden');
+            document.getElementById('difficultySelection').classList.add('hidden');
+        });
+
+        document.getElementById('easyDiff').addEventListener('click', () => { difficulty = 'easy'; startGame(); });
+        document.getElementById('mediumDiff').addEventListener('click', () => { difficulty = 'medium'; startGame(); });
+        document.getElementById('hardDiff').addEventListener('click', () => { difficulty = 'hard'; startGame(); });
+
+        function startGame() {
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('difficultySelection').classList.add('hidden');
+            document.getElementById('gameArea').classList.remove('hidden');
+            resetGame();
+        }
+
+        function resetGame() {
+            board = Array(25).fill(null);
+            currentPlayer = 'X';
+            gameActive = true;
+            createBoard();
+            updateUI();
+            clearTimeout(computerTimeout);
+        }
+
+        document.getElementById('resetButton').addEventListener('click', resetGame);
+        document.getElementById('changeModeButton').addEventListener('click', () => {
+            document.getElementById('gameArea').classList.add('hidden');
+            document.getElementById('modeSelection').classList.remove('hidden');
+            gameActive = false;
+            clearTimeout(computerTimeout);
+        });
+
+        // Modals
+        document.getElementById('showRules').addEventListener('click', () => rulesModal.style.display = 'flex');
+        document.getElementById('closeRules').addEventListener('click', () => rulesModal.style.display = 'none');
+        document.getElementById('resultClose').addEventListener('click', () => {
+            resultModal.style.display = 'none';
+            resetGame();
+        });
+
+        window.onclick = (event) => {
+            if (event.target == rulesModal) rulesModal.style.display = 'none';
+            if (event.target == resultModal) resultModal.style.display = 'none';
+        }
+
+        createBoard();
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition">Return to Menu</a>
+    </div>
+</body>
+
+</html>
