@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Tsunami</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            background-color: #0f172a;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            background-color: #334155;
+        }
+
+        .cell.x {
+            color: #22d3ee; /* cyan-400 */
+        }
+
+        .cell.o {
+            color: #f472b6; /* pink-400 */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .cell {
+                width: 60px;
+                height: 60px;
+                font-size: 1.75rem;
+            }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+            border: 1px solid #334155;
+        }
+
+        /* Wave Indicator */
+        #waveWarning {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #38bdf8;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .warning-active {
+            opacity: 1 !important;
+        }
+
+        .arrow {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 1.5rem;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(5px); }
+        }
+
+        .arrow-north { transform: rotate(-90deg); animation: bounceNorth 1s infinite; }
+        .arrow-south { transform: rotate(90deg); animation: bounceSouth 1s infinite; }
+        .arrow-west { transform: rotate(180deg); animation: bounceWest 1s infinite; }
+        .arrow-east { transform: rotate(0deg); animation: bounceEast 1s infinite; }
+
+        @keyframes bounceNorth { 0%, 100% { transform: rotate(-90deg) translateX(0); } 50% { transform: rotate(-90deg) translateX(5px); } }
+        @keyframes bounceSouth { 0%, 100% { transform: rotate(90deg) translateX(0); } 50% { transform: rotate(90deg) translateX(5px); } }
+        @keyframes bounceWest { 0%, 100% { transform: rotate(180deg) translateX(0); } 50% { transform: rotate(180deg) translateX(5px); } }
+        @keyframes bounceEast { 0%, 100% { transform: rotate(0deg) translateX(0); } 50% { transform: rotate(0deg) translateX(5px); } }
+
+        /* Tsunami Effect */
+        .tsunami-wave {
+            position: absolute;
+            background: rgba(56, 189, 248, 0.3);
+            pointer-events: none;
+            z-index: 50;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .wave-north { top: 100%; left: 0; width: 100%; height: 20%; }
+        .wave-south { bottom: 100%; left: 0; width: 100%; height: 20%; }
+        .wave-east { left: -20%; top: 0; width: 20%; height: 100%; }
+        .wave-west { right: -20%; top: 0; width: 20%; height: 100%; }
+
+        .tsunami-active-north { top: -20%; }
+        .tsunami-active-south { bottom: -20%; }
+        .tsunami-active-east { left: 100%; }
+        .tsunami-active-west { right: 100%; }
+
+    </style>
+</head>
+
+<body class="text-slate-300 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-blue-600">
+            Tic Tac Tsunami
+        </h1>
+
+        <div id="waveWarning">
+            <span>Incoming Tsunami!</span>
+            <span id="warningArrow" class="arrow">→</span>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer"
+                    class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">2
+                    Players</button>
+                <button id="vsComputer"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">vs
+                    Computer</button>
+            </div>
+            <button id="showRules" class="mt-4 text-sky-400 hover:underline text-sm">How to Play</button>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Easy</button>
+                <button id="mediumDiff"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Medium</button>
+                <button id="hardDiff"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2 transition-colors">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden relative overflow-hidden">
+            <div id="tsunamiOverlay" class="tsunami-wave"></div>
+            <div id="gameBoard"
+                class="grid grid-cols-4 gap-1.5 mx-auto bg-slate-700 rounded-lg overflow-hidden shadow-lg"
+                style="width: fit-content;">
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                <button id="resetButton"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset</button>
+                <button id="changeModeButton"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content text-left">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-400 text-center">Rules of Tic Tac Tsunami</h2>
+            <ul class="list-disc list-inside space-y-2 text-slate-300">
+                <li>Played on a <span class="text-white font-bold">4x4 grid</span>.</li>
+                <li>First to get <span class="text-white font-bold">3 in a row</span> (horizontally, vertically, or diagonally) wins.</li>
+                <li>Every <span class="text-white font-bold">3 total moves</span>, a tsunami wave hits!</li>
+                <li>The tsunami pushes all pieces one cell in a random direction (North, South, East, or West).</li>
+                <li>Pieces pushed off the edge of the board are <span class="text-rose-400 font-bold">destroyed</span>.</li>
+                <li>Watch the warning arrow to see which way the next wave will go!</li>
+            </ul>
+            <button id="closeRules" class="mt-6 w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 rounded-lg">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-lg mb-4 text-white"></p>
+            <button id="modalCloseButton"
+                class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-8 rounded-md">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const waveWarning = document.getElementById('waveWarning');
+        const warningArrow = document.getElementById('warningArrow');
+        const tsunamiOverlay = document.getElementById('tsunamiOverlay');
+
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+
+        const rulesModal = document.getElementById('rulesModal');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+
+        let board = Array(16).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+        let difficulty = 'hard';
+        let moveCount = 0;
+        let nextWaveDirection = '';
+        let computerTimeout;
+
+        const directions = ['North', 'South', 'East', 'West'];
+
+        function showRules() { rulesModal.style.display = 'flex'; }
+        function closeRules() { rulesModal.style.display = 'none'; }
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+        function closeModal() { messageModal.style.display = 'none'; }
+
+        document.getElementById('showRules').onclick = showRules;
+        document.getElementById('closeRules').onclick = closeRules;
+        document.getElementById('modalCloseButton').onclick = closeModal;
+
+        function initializeGame() {
+            board = Array(16).fill('');
+            gameActive = true;
+            moveCount = 0;
+            waveWarning.classList.remove('warning-active');
+            pickNextWaveDirection();
+            renderBoard();
+            updateStatus();
+            clearTimeout(computerTimeout);
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                computerTurn();
+            }
+        }
+
+        function pickNextWaveDirection() {
+            nextWaveDirection = directions[Math.floor(Math.random() * directions.length)];
+            warningArrow.className = 'arrow arrow-' + nextWaveDirection.toLowerCase();
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, index) => {
+                const cell = document.createElement('div');
+                cell.className = `cell rounded-md ${mark.toLowerCase()}`;
+                cell.textContent = mark;
+                cell.onclick = () => handleCellClick(index);
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive || board[index] !== '' || (gameMode === 'PvC' && currentPlayer === 'O')) return;
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            moveCount++;
+            renderBoard();
+
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer + " Wins!");
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                endGame("Draw!");
+                return;
+            }
+
+            if (moveCount % 3 === 0) {
+                triggerTsunami();
+            } else {
+                if (moveCount % 3 === 2) {
+                    waveWarning.classList.add('warning-active');
+                }
+                switchPlayer();
+            }
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                computerTurn();
+            }
+        }
+
+        function updateStatus() {
+            statusElement.textContent = (gameMode === 'PvC' && currentPlayer === 'O') ? "Computer's turn..." : `Player ${currentPlayer}'s turn`;
+        }
+
+        async function triggerTsunami() {
+            gameActive = false;
+            statusElement.textContent = "TSUNAMI HIT!";
+            waveWarning.classList.remove('warning-active');
+
+            // Animation
+            tsunamiOverlay.className = `tsunami-wave wave-${nextWaveDirection.toLowerCase()}`;
+            await new Promise(r => setTimeout(r, 50));
+            tsunamiOverlay.classList.add(`tsunami-active-${nextWaveDirection.toLowerCase()}`);
+
+            await new Promise(r => setTimeout(r, 500));
+
+            // Logic
+            const newBoard = Array(16).fill('');
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === '') continue;
+                const row = Math.floor(i / 4);
+                const col = i % 4;
+                let newRow = row, newCol = col;
+
+                if (nextWaveDirection === 'North') newRow--;
+                else if (nextWaveDirection === 'South') newRow++;
+                else if (nextWaveDirection === 'East') newCol++;
+                else if (nextWaveDirection === 'West') newCol--;
+
+                if (newRow >= 0 && newRow < 4 && newCol >= 0 && newCol < 4) {
+                    newBoard[newRow * 4 + newCol] = board[i];
+                }
+            }
+            board = newBoard;
+
+            // Reset overlay
+            tsunamiOverlay.className = 'tsunami-wave';
+
+            renderBoard();
+            pickNextWaveDirection();
+
+            if (checkWin('X') && checkWin('O')) {
+                endGame("Mutual Destruction! Draw!");
+            } else if (checkWin('X')) {
+                endGame("X Wins!");
+            } else if (checkWin('O')) {
+                endGame("O Wins!");
+            } else {
+                gameActive = true;
+                switchPlayer();
+            }
+        }
+
+        function checkWin(player) {
+            const wins = [
+                // Rows
+                [0,1,2], [1,2,3], [4,5,6], [5,6,7], [8,9,10], [9,10,11], [12,13,14], [13,14,15],
+                // Cols
+                [0,4,8], [4,8,12], [1,5,9], [5,9,13], [2,6,10], [6,10,14], [3,7,11], [7,11,15],
+                // Diags
+                [0,5,10], [1,6,11], [4,9,14], [5,10,15],
+                [2,5,8], [3,6,9], [6,9,12], [7,10,13]
+            ];
+            return wins.some(w => w.every(i => board[i] === player));
+        }
+
+        function endGame(msg) {
+            gameActive = false;
+            statusElement.textContent = msg;
+            showModal(msg);
+        }
+
+        function computerTurn() {
+            computerTimeout = setTimeout(() => {
+                let move;
+                if (difficulty === 'easy') move = randomMove();
+                else if (difficulty === 'medium') move = mediumMove();
+                else move = hardMove();
+
+                if (move !== undefined) makeMove(move);
+            }, 800);
+        }
+
+        function randomMove() {
+            const available = board.map((c, i) => c === '' ? i : null).filter(i => i !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function mediumMove() {
+            // Win or Block
+            for (let p of ['O', 'X']) {
+                for (let i = 0; i < 16; i++) {
+                    if (board[i] === '') {
+                        board[i] = p;
+                        if (checkWin(p)) { board[i] = ''; return i; }
+                        board[i] = '';
+                    }
+                }
+            }
+            return randomMove();
+        }
+
+        function hardMove() {
+            // Minimal minimax or improved strategic
+            // Since it's 4x4 and has tsunami, full minimax might be slow/complex.
+            // Let's use a prioritized strategic move.
+            const winMove = findWin('O');
+            if (winMove !== -1) return winMove;
+            const blockMove = findWin('X');
+            if (blockMove !== -1) return blockMove;
+
+            // Prefer center squares (5, 6, 9, 10)
+            const centers = [5, 6, 9, 10].filter(i => board[i] === '');
+            if (centers.length > 0) return centers[Math.floor(Math.random() * centers.length)];
+
+            return randomMove();
+        }
+
+        function findWin(p) {
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === '') {
+                    board[i] = p;
+                    if (checkWin(p)) { board[i] = ''; return i; }
+                    board[i] = '';
+                }
+            }
+            return -1;
+        }
+
+        // Navigation
+        document.getElementById('vsPlayer').onclick = () => {
+            gameMode = '2P'; currentPlayer = 'X';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        };
+        document.getElementById('vsComputer').onclick = () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        };
+        document.getElementById('backToMode').onclick = () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+        document.getElementById('easyDiff').onclick = () => startPvC('easy');
+        document.getElementById('mediumDiff').onclick = () => startPvC('medium');
+        document.getElementById('hardDiff').onclick = () => startPvC('hard');
+
+        function startPvC(diff) {
+            gameMode = 'PvC'; difficulty = diff;
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        }
+
+        document.getElementById('resetButton').onclick = () => {
+            currentPlayer = (gameMode === 'PvC') ? (Math.random() < 0.5 ? 'X' : 'O') : 'X';
+            initializeGame();
+        };
+        document.getElementById('changeModeButton').onclick = () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+
+        // Initial setup
+        pickNextWaveDirection();
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">Return to Menu</a>
+    </div>
+</body>
+
+</html>
