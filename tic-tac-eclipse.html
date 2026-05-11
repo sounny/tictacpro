@@ -144,6 +144,7 @@
             renderBoard();
             if (checkWin()) {
                 statusElement.textContent = `Player ${currentPlayer} wins!`;
+                if (typeof TicTacStats !== 'undefined') TicTacStats.recordResult(document.title, currentPlayer === 'X' ? 'win' : 'loss');
                 gameActive = false;
                 eclipseBadge.textContent = 'Game over';
                 eclipseBadge.className = 'px-3 py-1 rounded-full bg-emerald-500 text-slate-900 font-semibold';
@@ -151,6 +152,7 @@
             }
             if (board.every(mark => mark)) {
                 statusElement.textContent = "It's a draw. No more light to claim.";
+                if (typeof TicTacStats !== 'undefined') TicTacStats.recordResult(document.title, "draw");
                 gameActive = false;
                 eclipseBadge.textContent = 'Draw';
                 eclipseBadge.className = 'px-3 py-1 rounded-full bg-slate-500 text-slate-900 font-semibold';
@@ -242,5 +244,6 @@
         buildBoard();
         updateStatus();
     </script>
+    <script src="js/stats.js"></script>
 </body>
 </html>

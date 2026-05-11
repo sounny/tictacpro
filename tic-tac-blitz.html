@@ -228,6 +228,12 @@
         function computerMove() { if (!gameActive) return; const empties = board.map((v, i) => v === '' ? i : null).filter(i => i !== null); const idx = empties[Math.floor(Math.random() * empties.length)]; makeMove(idx, 'O'); if (gameActive) startTurnTimer(); }
 
         function endGame(tie, winner = null) {
+            if (typeof TicTacStats !== 'undefined' && (typeof gameMode !== 'undefined' ? gameMode === 'PvC' : true)) {
+                if (tie) TicTacStats.recordResult(document.title, 'draw');
+                else if (winner === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (winner === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
             gameActive = false;
             clearTimeout(timerId); clearInterval(countdownId);
             if (tie) { statusElement.textContent = "It's a tie!"; showModal("It's a tie!"); }
@@ -249,6 +255,7 @@
     <div class="mt-6 text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+    <script src="js/stats.js"></script>
 </body>
 
 </html>

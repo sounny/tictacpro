@@ -160,7 +160,13 @@ function computerMove(){
     switchPlayer();
 }
 
-function endGame(tie,winner){
+function endGame(tie,winner) {
+            if (typeof TicTacStats !== 'undefined' && (typeof gameMode !== 'undefined' ? gameMode === 'PvC' : true)) {
+                if (tie) TicTacStats.recordResult(document.title, 'draw');
+                else if (winner === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (winner === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
     gameActive=false;
     if(tie){
         statusElement.textContent = "It's a tie!";
@@ -207,5 +213,6 @@ changeModeBtn.addEventListener('click', ()=>{
 
 renderBoard();
 </script>
+    <script src="js/stats.js"></script>
 </body>
 </html>

@@ -225,7 +225,13 @@ function computerSelect(){
     selectionP2 = available[Math.floor(Math.random()*available.length)];
 }
 
-function endGame(tie, winner=null){
+function endGame(tie, winner=null) {
+            if (typeof TicTacStats !== 'undefined' && (typeof gameMode !== 'undefined' ? gameMode === 'PvC' : true)) {
+                if (tie) TicTacStats.recordResult(document.title, 'draw');
+                else if (winner === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (winner === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
     gameActive = false;
     if(tie){
         statusElement.textContent = "It's a Tie!";
@@ -294,5 +300,6 @@ gameAreaDiv.classList.add('hidden');
 <div class="mt-6 text-center">
     <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
 </div>
+    <script src="js/stats.js"></script>
 </body>
 </html>
