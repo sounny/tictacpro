@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Darts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            background-color: #0f172a;
+        }
+
+        .dartboard-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 0 auto;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+            border-radius: 50%;
+            border: 12px solid #1e293b;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        /* Dartboard segments and rings */
+        .dartboard-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle, transparent 20%, rgba(31, 41, 55, 0.3) 20.5%, rgba(31, 41, 55, 0.3) 40%, transparent 40.5%),
+                radial-gradient(circle, transparent 60%, rgba(31, 41, 55, 0.3) 60.5%, rgba(31, 41, 55, 0.3) 80%, transparent 80.5%),
+                conic-gradient(
+                    #111827 0deg 45deg,
+                    #1e293b 45deg 90deg,
+                    #111827 90deg 135deg,
+                    #1e293b 135deg 180deg,
+                    #111827 180deg 225deg,
+                    #1e293b 225deg 270deg,
+                    #111827 270deg 315deg,
+                    #1e293b 315deg 360deg
+                );
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* The grid lines */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .grid-cell-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Dartboard rings */
+        .ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+        }
+
+        .ring-1 { width: 30%; height: 30%; }
+        .ring-2 { width: 65%; height: 65%; }
+        .ring-3 { width: 95%; height: 95%; }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            position: relative;
+            z-index: 5;
+        }
+
+        .cell.x { color: #22d3ee; }
+        .cell.o { color: #f472b6; }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background-color: #ef4444;
+        }
+
+        #crosshair::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        #crosshair::after {
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #crosshair .circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ef4444;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Thunk animation */
+        @keyframes thunk {
+            0% { transform: scale(3); opacity: 0; }
+            70% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .dart-placed {
+            animation: thunk 0.2s ease-out forwards;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        /* Hide cursor in game area */
+        #gameArea {
+            cursor: none;
+        }
+    </style>
+</head>
+
+<body class="text-slate-300 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h1 class="text-4xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">
+            Tic Tac Darts
+        </h1>
+        <p class="text-slate-400 text-center text-sm mb-6">
+            Aim, stabilize, and throw!
+        </p>
+
+        <div id="modeSelection" class="space-y-4">
+            <button id="vsPlayer" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 rounded-lg transition transform hover:scale-105">
+                Local Multiplayer
+            </button>
+            <button id="vsComputer" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition transform hover:scale-105">
+                Play vs AI
+            </button>
+            <button id="showRules" class="w-full text-slate-400 hover:text-white text-sm transition">
+                How to Play
+            </button>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div id="status" class="text-lg font-medium text-sky-400">Player X's Turn</div>
+                <div id="difficultyLabel" class="text-xs text-slate-500 uppercase tracking-widest">Wobble: 1.0x</div>
+            </div>
+
+            <div class="dartboard-container" id="dartboard">
+                <div class="dartboard-bg"></div>
+                <div class="ring ring-1"></div>
+                <div class="ring ring-2"></div>
+                <div class="ring ring-3"></div>
+
+                <div class="grid-overlay">
+                    <div class="grid-cell-border"></div><div class="grid-cell-border"></div><div class="grid-cell-border"></div>
+                    <div class="grid-cell-border"></div><div class="grid-cell-border"></div><div class="grid-cell-border"></div>
+                    <div class="grid-cell-border"></div><div class="grid-cell-border"></div><div class="grid-cell-border"></div>
+                </div>
+
+                <div id="gameBoard" class="grid grid-cols-3 grid-rows-3 w-full h-full relative">
+                    <!-- Cells will be generated here -->
+                </div>
+
+                <div id="crosshair">
+                    <div class="circle"></div>
+                </div>
+            </div>
+
+            <div class="flex space-x-3 mt-8">
+                <button id="resetButton" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg transition">Reset</button>
+                <button id="changeModeButton" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg transition">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold text-white mb-4">How to Play</h2>
+            <ul class="text-left text-slate-300 space-y-3 mb-6">
+                <li>🎯 <span class="text-white font-medium">Aim:</span> Move your mouse to aim the crosshair.</li>
+                <li>🌪️ <span class="text-white font-medium">Wobble:</span> The crosshair drifts randomly. Time your click!</li>
+                <li>🖱️ <span class="text-white font-medium">Throw:</span> Click to place your piece.</li>
+                <li>🚫 <span class="text-white font-medium">Miss:</span> Land outside the board to lose your turn.</li>
+                <li>📈 <span class="text-white font-medium">Difficulty:</span> Wobble increases as the game progresses.</li>
+            </ul>
+            <button id="closeRules" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-8 rounded-lg transition">
+                Got it!
+            </button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle" class="text-2xl font-bold text-white mb-2">Game Over</h2>
+            <p id="modalMessage" class="text-slate-300 mb-6"></p>
+            <button id="modalCloseButton" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-8 rounded-lg transition">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const difficultyLabel = document.getElementById('difficultyLabel');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const crosshair = document.getElementById('crosshair');
+        const dartboard = document.getElementById('dartboard');
+
+        const rulesModal = document.getElementById('rulesModal');
+        const showRulesBtn = document.getElementById('showRules');
+        const closeRulesBtn = document.getElementById('closeRules');
+
+        const messageModal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = '2P';
+        let turnCount = 0;
+
+        // Crosshair movement
+        let mouseX = 160, mouseY = 160;
+        let crossX = 160, crossY = 160;
+        let wobbleX = 0, wobbleY = 0;
+        let wobblePhase = 0;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function initGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            turnCount = 0;
+            updateStatus();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                if (board[i]) {
+                    cell.textContent = board[i];
+                    cell.classList.add(board[i].toLowerCase());
+                }
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function updateStatus() {
+            const wobbleMultiplier = (1 + turnCount * 0.2).toFixed(1);
+            difficultyLabel.textContent = `Wobble: ${wobbleMultiplier}x`;
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "AI is aiming...";
+            } else {
+                statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+            }
+        }
+
+        // Crosshair wobble logic
+        function updateCrosshair() {
+            if (!gameActive || (gameMode === 'PvC' && currentPlayer === 'O')) {
+                // If AI turn or game over, hide crosshair or let it stay
+                // Actually AI should have its own crosshair movement for visual feedback
+            }
+
+            const intensity = 5 + turnCount * 2;
+            wobblePhase += 0.05;
+
+            wobbleX = Math.sin(wobblePhase) * intensity + Math.cos(wobblePhase * 0.7) * (intensity * 0.5);
+            wobbleY = Math.cos(wobblePhase * 1.1) * intensity + Math.sin(wobblePhase * 0.8) * (intensity * 0.5);
+
+            // Smoothing
+            crossX += (mouseX + wobbleX - crossX) * 0.15;
+            crossY += (mouseY + wobbleY - crossY) * 0.15;
+
+            crosshair.style.left = `${crossX}px`;
+            crosshair.style.top = `${crossY}px`;
+
+            requestAnimationFrame(updateCrosshair);
+        }
+
+        dartboard.addEventListener('mousemove', (e) => {
+            const rect = dartboard.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        dartboard.addEventListener('click', () => {
+            if (!gameActive || (gameMode === 'PvC' && currentPlayer === 'O')) return;
+            throwDart(crossX, crossY);
+        });
+
+        function throwDart(x, y) {
+            const rect = dartboard.getBoundingClientRect();
+            // Check if miss
+            const distFromCenter = Math.sqrt(Math.pow(x - 160, 2) + Math.pow(y - 160, 2));
+            if (distFromCenter > 155) { // Radius of board is ~160, subtract border
+                showToast("Missed the board!");
+                endTurn();
+                return;
+            }
+
+            // Find cell
+            const cellWidth = 320 / 3;
+            const col = Math.floor(x / cellWidth);
+            const row = Math.floor(y / cellWidth);
+            const index = row * 3 + col;
+
+            if (index < 0 || index >= 9) {
+                showToast("Missed!");
+                endTurn();
+                return;
+            }
+
+            if (board[index] !== '') {
+                showToast("Cell occupied!");
+                endTurn();
+                return;
+            }
+
+            placePiece(index);
+        }
+
+        function placePiece(index) {
+            board[index] = currentPlayer;
+            const cell = gameBoardElement.children[index];
+            cell.textContent = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase(), 'dart-placed');
+
+            turnCount++;
+
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer);
+            } else if (board.every(c => c !== '')) {
+                endGame('tie');
+            } else {
+                endTurn();
+            }
+        }
+
+        function endTurn() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                setTimeout(computerMove, 1000);
+            }
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(idx => board[idx] === player);
+            });
+        }
+
+        function endGame(result) {
+            gameActive = false;
+            if (result === 'tie') {
+                modalTitle.textContent = "It's a Draw!";
+                modalMessageElement.textContent = "Both of you are sharp shooters!";
+            } else {
+                modalTitle.textContent = `${result} Wins!`;
+                modalMessageElement.textContent = result === 'X' ? "Player X hit the mark!" : "Player O takes the match!";
+            }
+            messageModal.style.display = 'flex';
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            // Simple AI:
+            // 1. Try to win
+            // 2. Try to block
+            // 3. Aim for center/corners
+
+            let targetIndex = -1;
+
+            // Check win
+            for(let i=0; i<9; i++) {
+                if(board[i] === '') {
+                    board[i] = 'O';
+                    if(checkWin('O')) targetIndex = i;
+                    board[i] = '';
+                    if(targetIndex !== -1) break;
+                }
+            }
+
+            // Block
+            if(targetIndex === -1) {
+                for(let i=0; i<9; i++) {
+                    if(board[i] === '') {
+                        board[i] = 'X';
+                        if(checkWin('X')) targetIndex = i;
+                        board[i] = '';
+                        if(targetIndex !== -1) break;
+                    }
+                }
+            }
+
+            if(targetIndex === -1) {
+                const preferred = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+                targetIndex = preferred.find(i => board[i] === '');
+            }
+
+            // Simulate aiming
+            const cellWidth = 320 / 3;
+            const row = Math.floor(targetIndex / 3);
+            const col = targetIndex % 3;
+
+            const targetX = col * cellWidth + cellWidth/2;
+            const targetY = row * cellWidth + cellWidth/2;
+
+            // Move "mouse" to target
+            mouseX = targetX;
+            mouseY = targetY;
+
+            // Wait for crosshair to stabilize a bit
+            setTimeout(() => {
+                // AI can still miss if wobble is high!
+                throwDart(crossX, crossY);
+            }, 800);
+        }
+
+        function showToast(msg) {
+            // Simple status feedback instead of alert
+            const originalStatus = statusElement.textContent;
+            statusElement.textContent = msg;
+            statusElement.classList.add('text-rose-500');
+            setTimeout(() => {
+                statusElement.classList.remove('text-rose-500');
+                if (gameActive) updateStatus();
+            }, 1000);
+        }
+
+        // Event Handlers
+        vsPlayerButton.onclick = () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initGame();
+        };
+
+        vsComputerButton.onclick = () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initGame();
+        };
+
+        resetButton.onclick = initGame;
+        changeModeButton.onclick = () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+
+        showRulesBtn.onclick = () => rulesModal.style.display = 'flex';
+        closeRulesBtn.onclick = () => rulesModal.style.display = 'none';
+        modalCloseButton.onclick = () => {
+            messageModal.style.display = 'none';
+            initGame();
+        };
+
+        // Start animation loop
+        updateCrosshair();
+
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition">Return to Menu</a>
+    </div>
+</body>
+</html>
