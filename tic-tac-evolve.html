@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Evolve</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+
+        .cell:hover {
+            background-color: #334155;
+        }
+
+        .piece {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stage-seed { transform: scale(0.4); }
+        .stage-sprout { transform: scale(0.7); }
+        .stage-bloom { transform: scale(1.1); filter: drop-shadow(0 0 5px currentColor); }
+
+        .player-x { color: #ef4444; }
+        .player-o { color: #3b82f6; }
+
+        @keyframes evolve {
+            0% { transform: scale(0.5); opacity: 0.5; }
+            50% { transform: scale(1.4); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        .evolving {
+            animation: evolve 0.6s ease-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .cell {
+                width: 60px;
+                height: 60px;
+            }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            border: 1px solid #374151;
+        }
+
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1
+            class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-blue-500 to-purple-600">
+            Tic Tac Evolve</h1>
+        <div class="flex justify-center mb-6">
+            <button id="showRules" class="text-xs text-slate-400 hover:text-white underline">How to Play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer"
+                    class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">2
+                    Players</button>
+                <button id="vsComputer"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">vs
+                    Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select AI Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Easy</button>
+                <button id="mediumDiff"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2 transition-colors">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard"
+                class="grid grid-cols-4 gap-1.5 mx-auto bg-slate-700 rounded-lg overflow-hidden shadow-lg"
+                style="width: fit-content;">
+            </div>
+
+            <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-300 font-medium"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                <button id="resetButton"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Reset</button>
+                <button id="changeModeButton"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Modes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-emerald-400">Rules of Evolution</h2>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex items-start">
+                    <span class="text-emerald-500 mr-2">🌱</span>
+                    <span>Pieces evolve at the <b>start of your turn</b>: Seed (dot) → Sprout (circle) → Bloom (star).</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-emerald-500 mr-2">⚔️</span>
+                    <span><b>Stomping:</b> You can overwrite an opponent's <b>Sprout</b> with your own Seed.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-emerald-500 mr-2">🛡️</span>
+                    <span><b>Immunity:</b> Seeds cannot be stomped. Blooms are permanent.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-emerald-500 mr-2">🏆</span>
+                    <span>Win by getting <b>4 Blooms</b> in a row (horizontally, vertically, or diagonally).</span>
+                </li>
+            </ul>
+            <button id="closeRules" class="modal-button bg-indigo-600 hover:bg-indigo-700 text-white">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-xl font-bold mb-6"></p>
+            <button id="modalCloseButton"
+                class="modal-button bg-indigo-600 hover:bg-indigo-700 text-white">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const SEED = 0;
+        const SPROUT = 1;
+        const BLOOM = 2;
+
+        const ICONS = {
+            [SEED]: `<svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>`,
+            [SPROUT]: `<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="4"><circle cx="12" cy="12" r="8"/></svg>`,
+            [BLOOM]: `<svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+        };
+
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const backToModeButton = document.getElementById('backToMode');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const rulesModal = document.getElementById('rulesModal');
+        const showRulesBtn = document.getElementById('showRules');
+        const closeRulesBtn = document.getElementById('closeRules');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State
+        let board = Array(16).fill(null).map(() => ({ owner: '', stage: -1 }));
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+        let difficulty = 'hard';
+        let computerTimeout;
+
+        // Win conditions for 4x4
+        const winPatterns = [
+            [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], // Rows
+            [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15], // Cols
+            [0, 5, 10, 15], [3, 6, 9, 12] // Diagonals
+        ];
+
+        function initGame() {
+            board = Array(16).fill(null).map(() => ({ owner: '', stage: -1 }));
+            gameActive = true;
+            currentPlayer = 'X';
+            clearTimeout(computerTimeout);
+            renderBoard();
+            updateStatus();
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((cell, index) => {
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'cell rounded-md';
+                cellDiv.dataset.index = index;
+
+                if (cell.owner) {
+                    const pieceDiv = document.createElement('div');
+                    pieceDiv.className = `piece player-${cell.owner.toLowerCase()} stage-${getStageClass(cell.stage)}`;
+                    pieceDiv.innerHTML = ICONS[cell.stage];
+                    cellDiv.appendChild(pieceDiv);
+                }
+
+                cellDiv.addEventListener('click', () => handleMove(index));
+                gameBoardElement.appendChild(cellDiv);
+            });
+        }
+
+        function getStageClass(stage) {
+            if (stage === SEED) return 'seed';
+            if (stage === SPROUT) return 'sprout';
+            if (stage === BLOOM) return 'bloom';
+            return '';
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            const playerLabel = (gameMode === 'PvC' && currentPlayer === 'O') ? "AI" : `Player ${currentPlayer}`;
+            statusElement.textContent = `${playerLabel}'s Turn`;
+            statusElement.className = `status text-xl text-center mt-6 mb-4 h-8 font-bold player-${currentPlayer.toLowerCase()}`;
+        }
+
+        function handleMove(index) {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            if (canPlaceAt(index, currentPlayer)) {
+                makeMove(index);
+            }
+        }
+
+        function canPlaceAt(index, player) {
+            const cell = board[index];
+            if (cell.owner === '') return true;
+            if (cell.owner !== player && cell.stage === SPROUT) return true;
+            return false;
+        }
+
+        function makeMove(index) {
+            board[index] = { owner: currentPlayer, stage: SEED };
+            renderBoard();
+
+            if (checkWin(currentPlayer)) {
+                endGame(currentPlayer);
+            } else {
+                startNextTurn();
+            }
+        }
+
+        function startNextTurn() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            evolvePieces(currentPlayer);
+            updateStatus();
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                computerTimeout = setTimeout(computerMove, 800);
+            }
+        }
+
+        function evolvePieces(player) {
+            let evolvedIndices = [];
+            board.forEach((cell, index) => {
+                if (cell.owner === player && cell.stage < BLOOM) {
+                    cell.stage++;
+                    evolvedIndices.push(index);
+                }
+            });
+
+            if (evolvedIndices.length > 0) {
+                evolvedIndices.forEach(index => {
+                    const cell = board[index];
+                    const cellDiv = gameBoardElement.children[index];
+                    let pieceDiv = cellDiv.querySelector('.piece');
+                    if (!pieceDiv) {
+                        pieceDiv = document.createElement('div');
+                        cellDiv.appendChild(pieceDiv);
+                    }
+                    pieceDiv.className = `piece player-${cell.owner.toLowerCase()} stage-${getStageClass(cell.stage)} evolving`;
+                    pieceDiv.innerHTML = ICONS[cell.stage];
+                });
+
+                // Final re-render after animation
+                setTimeout(renderBoard, 600);
+            }
+
+            if (checkWin(player)) {
+                gameActive = false;
+                setTimeout(() => endGame(player), 650);
+            }
+        }
+
+        function checkWin(player) {
+            return winPatterns.some(pattern =>
+                pattern.every(idx => board[idx].owner === player && board[idx].stage === BLOOM)
+            );
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            if (winner === 'Tie') {
+                modalMessageElement.textContent = "It's a Draw!";
+                statusElement.textContent = "Draw!";
+            } else {
+                modalMessageElement.textContent = (gameMode === 'PvC' && winner === 'O') ? "AI Wins!" : `Player ${winner} Wins!`;
+                statusElement.textContent = `${modalMessageElement.textContent}`;
+
+                const winningPattern = winPatterns.find(pattern =>
+                    pattern.every(idx => board[idx].owner === winner && board[idx].stage === BLOOM)
+                );
+                if (winningPattern) {
+                    winningPattern.forEach(idx => {
+                        gameBoardElement.children[idx].classList.add('bg-slate-600', 'ring-4', 'ring-yellow-400', 'z-10');
+                    });
+                }
+            }
+            setTimeout(() => {
+                messageModal.style.display = 'flex';
+            }, 1000);
+        }
+
+        // --- AI Logic ---
+        function computerMove() {
+            if (!gameActive) return;
+
+            let bestMove;
+            if (difficulty === 'easy') {
+                bestMove = getRandomMove();
+            } else {
+                bestMove = getStrategicMove();
+            }
+
+            if (bestMove !== undefined) {
+                makeMove(bestMove);
+            }
+        }
+
+        function getRandomMove() {
+            const moves = [];
+            board.forEach((_, i) => { if (canPlaceAt(i, 'O')) moves.push(i); });
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+
+        function getStrategicMove() {
+            const validMoves = [];
+            board.forEach((_, i) => { if (canPlaceAt(i, 'O')) validMoves.push(i); });
+
+            // 1. Defend: Block player's near-complete Bloom lines
+            const playerBloomLines = winPatterns.filter(p =>
+                p.filter(idx => board[idx].owner === 'X' && board[idx].stage === BLOOM).length === 3 &&
+                p.some(idx => canPlaceAt(idx, 'O'))
+            );
+            if (playerBloomLines.length > 0) {
+                const p = playerBloomLines[0];
+                return p.find(idx => canPlaceAt(idx, 'O'));
+            }
+
+            // 2. Aggressive: Stomp player's Sprouts that are about to Bloom
+            const dangerousSprouts = validMoves.filter(idx => board[idx].owner === 'X' && board[idx].stage === SPROUT);
+            if (dangerousSprouts.length > 0 && difficulty === 'hard') {
+                // Prioritize Sprouts that would complete a line
+                for (let idx of dangerousSprouts) {
+                    const line = winPatterns.find(p => p.includes(idx) &&
+                        p.filter(i => board[i].owner === 'X' && (board[i].stage === BLOOM || i === idx)).length === 4
+                    );
+                    if (line) return idx;
+                }
+                return dangerousSprouts[Math.floor(Math.random() * dangerousSprouts.length)];
+            }
+
+            // 3. Strategic: Place where we have most potential
+            if (board[5].owner === '') return 5;
+            if (board[6].owner === '') return 6;
+            if (board[9].owner === '') return 9;
+            if (board[10].owner === '') return 10;
+
+            return getRandomMove();
+        }
+
+        // Event Listeners
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        });
+
+        backToModeButton.addEventListener('click', () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        document.getElementById('easyDiff').addEventListener('click', () => startPvC('easy'));
+        document.getElementById('mediumDiff').addEventListener('click', () => startPvC('medium'));
+        document.getElementById('hardDiff').addEventListener('click', () => startPvC('hard'));
+
+        function startPvC(diff) {
+            gameMode = 'PvC';
+            difficulty = diff;
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initGame();
+        }
+
+        resetButton.addEventListener('click', initGame);
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        showRulesBtn.addEventListener('click', () => rulesModal.style.display = 'flex');
+        closeRulesBtn.addEventListener('click', () => rulesModal.style.display = 'none');
+        modalCloseButton.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+            initGame();
+        });
+
+        window.onclick = (event) => {
+            if (event.target == rulesModal) rulesModal.style.display = 'none';
+            if (event.target == messageModal) messageModal.style.display = 'none';
+        };
+
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+</body>
+
+</html>
