@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+        }
+
+        .cell:hover {
+            background-color: #334155;
+        }
+
+        .cell.x {
+            color: #ef4444;
+        }
+
+        .cell.o {
+            color: #3b82f6;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: inset 0 0 5px #facc15; border-color: #facc15; }
+            50% { box-shadow: inset 0 0 20px #facc15; border-color: #fbbf24; }
+            100% { box-shadow: inset 0 0 5px #facc15; border-color: #facc15; }
+        }
+
+        .winning-cell {
+            animation: glow 1.5s infinite;
+            background-color: #334155 !important;
+            color: #facc15 !important;
+            border-width: 3px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 450px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            .cell {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #374151;
+            max-width: 90%;
+            width: 400px;
+        }
+
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h1
+            class="text-4xl md:text-5xl font-bold text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+            Tic Tac Chain</h1>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Connect 5 pieces in any shape to win! Horizontal, vertical, or diagonal adjacency counts.
+            </p>
+            <h2 class="text-xl mb-4 text-slate-200">Choose Game Mode:</h2>
+            <div class="flex flex-col space-y-3">
+                <button id="vsPlayer"
+                    class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">2
+                    Players</button>
+                <button id="vsComputer"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">vs
+                    Computer</button>
+                <button id="showRules" class="text-slate-400 hover:text-white text-sm underline">How to Play</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-4 text-slate-200">Select Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Easy</button>
+                <button id="mediumDiff"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Medium</button>
+                <button id="hardDiff"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-4 transition-colors">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard"
+                class="grid grid-cols-4 gap-1.5 mx-auto bg-slate-600 p-1.5 rounded-lg overflow-hidden shadow-lg"
+                style="width: fit-content;">
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-200 font-medium"></p>
+
+            <div class="flex flex-col space-y-3 mt-4">
+                <button id="resetButton"
+                    class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Reset
+                    Game</button>
+                <button id="changeModeButton"
+                    class="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-400">How to Play</h2>
+            <ul class="text-left text-slate-300 space-y-3 mb-6">
+                <li>• The game is played on a <span class="text-white font-semibold">4x4 grid</span>.</li>
+                <li>• Players take turns placing their mark (X or O).</li>
+                <li>• Pieces are <span class="text-white font-semibold">connected</span> if they are adjacent horizontally, vertically, or diagonally.</li>
+                <li>• Win by creating a <span class="text-white font-semibold text-yellow-400">connected chain of 5 or more</span> of your pieces.</li>
+                <li>• The chain can be in any shape, not just a straight line!</li>
+            </ul>
+            <button id="closeRules"
+                class="modal-button bg-sky-500 hover:bg-sky-600 text-white font-semibold">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Win/Tie Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-xl font-bold mb-6"></p>
+            <button id="modalCloseButton"
+                class="modal-button bg-indigo-500 hover:bg-indigo-600 text-white font-semibold">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const easyDiffButton = document.getElementById('easyDiff');
+        const mediumDiffButton = document.getElementById('mediumDiff');
+        const hardDiffButton = document.getElementById('hardDiff');
+        const backToModeButton = document.getElementById('backToMode');
+        const showRulesButton = document.getElementById('showRules');
+        const rulesModal = document.getElementById('rulesModal');
+        const closeRulesButton = document.getElementById('closeRules');
+
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State
+        let board = Array(16).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+        let difficulty = 'medium';
+        let computerTimeout;
+
+        // --- UI Functions ---
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            messageModal.style.display = 'none';
+            if (!gameActive) resetGame();
+        }
+
+        // --- Game Logic ---
+        function initializeGame() {
+            board = Array(16).fill('');
+            gameActive = true;
+            renderBoard();
+            updateStatus();
+            clearTimeout(computerTimeout);
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                handleComputerTurn();
+            }
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-lg');
+                if (mark === 'X') cell.classList.add('x');
+                if (mark === 'O') cell.classList.add('o');
+                cell.textContent = mark;
+                cell.dataset.index = index;
+                cell.addEventListener('click', () => handleCellClick(index));
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        function updateStatus() {
+            if (gameActive) {
+                const playerText = (gameMode === 'PvC' && currentPlayer === 'O') ? "Computer" : `Player ${currentPlayer}`;
+                statusElement.textContent = `${playerText}'s turn`;
+            }
+        }
+
+        function handleCellClick(index) {
+            if (board[index] !== '' || !gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            makeMove(index);
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                handleComputerTurn();
+            }
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            renderBoard();
+
+            const winResult = checkWin(currentPlayer, board);
+            if (winResult) {
+                endGame(false, currentPlayer, winResult.cells);
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true);
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateStatus();
+            }
+        }
+
+        function getNeighbors(index) {
+            const row = Math.floor(index / 4);
+            const col = index % 4;
+            const neighbors = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < 4 && nc >= 0 && nc < 4) {
+                        neighbors.push(nr * 4 + nc);
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        function checkWin(player, currentBoard) {
+            const visited = new Set();
+            for (let i = 0; i < 16; i++) {
+                if (currentBoard[i] === player && !visited.has(i)) {
+                    const component = [];
+                    const queue = [i];
+                    visited.add(i);
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        component.push(curr);
+                        const neighbors = getNeighbors(curr);
+                        for (const neighbor of neighbors) {
+                            if (currentBoard[neighbor] === player && !visited.has(neighbor)) {
+                                visited.add(neighbor);
+                                queue.push(neighbor);
+                            }
+                        }
+                    }
+                    if (component.length >= 5) {
+                        return { cells: component };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function endGame(isTie, winner = null, winningCells = []) {
+            gameActive = false;
+            if (isTie) {
+                statusElement.textContent = "Draw!";
+                showModal("It's a draw!");
+            } else {
+                const winnerText = (gameMode === 'PvC' && winner === 'O') ? "Computer wins!" : `Player ${winner} wins!`;
+                statusElement.textContent = winnerText;
+
+                winningCells.forEach(idx => {
+                    gameBoardElement.children[idx].classList.add('winning-cell');
+                });
+
+                setTimeout(() => {
+                    showModal(winnerText);
+                }, 600);
+            }
+        }
+
+        // --- AI Logic ---
+        function handleComputerTurn() {
+            statusElement.textContent = "Computer is thinking...";
+            computerTimeout = setTimeout(() => {
+                const move = getComputerMove();
+                makeMove(move);
+            }, 800);
+        }
+
+        function getComputerMove() {
+            if (difficulty === 'easy') {
+                const empty = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+                return empty[Math.floor(Math.random() * empty.length)];
+            }
+
+            // Medium/Hard logic
+            // 1. Can I win?
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin('O', board)) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            // 2. Block opponent win
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === '') {
+                    board[i] = 'X';
+                    if (checkWin('X', board)) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            if (difficulty === 'medium') {
+                // Strategic placements
+                const preferred = [5, 6, 9, 10, 0, 3, 12, 15]; // Center first, then corners
+                for (const idx of preferred) {
+                    if (board[idx] === '') return idx;
+                }
+                const empty = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+                return empty[Math.floor(Math.random() * empty.length)];
+            }
+
+            // Hard: Evaluation based move
+            return getBestMoveHard();
+        }
+
+        function getBestMoveHard() {
+            let bestScore = -Infinity;
+            let move = -1;
+            const empty = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+
+            for (const i of empty) {
+                board[i] = 'O';
+                const score = evaluateBoard('O') - evaluateBoard('X') * 1.1;
+                board[i] = '';
+                if (score > bestScore) {
+                    bestScore = score;
+                    move = i;
+                }
+            }
+            return move;
+        }
+
+        function evaluateBoard(player) {
+            let score = 0;
+            const visited = new Set();
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === player && !visited.has(i)) {
+                    let count = 0;
+                    const queue = [i];
+                    visited.add(i);
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        count++;
+                        getNeighbors(curr).forEach(n => {
+                            if (board[n] === player && !visited.has(n)) {
+                                visited.add(n);
+                                queue.push(n);
+                            }
+                        });
+                    }
+                    // Weight larger chains more heavily
+                    score += Math.pow(count, 3);
+                }
+            }
+            return score;
+        }
+
+        // --- Event Listeners ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            currentPlayer = 'X';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        });
+
+        backToModeButton.addEventListener('click', () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        easyDiffButton.addEventListener('click', () => startPvC('easy'));
+        mediumDiffButton.addEventListener('click', () => startPvC('medium'));
+        hardDiffButton.addEventListener('click', () => startPvC('hard'));
+
+        function startPvC(diff) {
+            gameMode = 'PvC';
+            difficulty = diff;
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            initializeGame();
+        }
+
+        function resetGame() {
+            if (gameMode === 'PvC') {
+                currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            } else {
+                currentPlayer = 'X';
+            }
+            initializeGame();
+        }
+
+        resetButton.addEventListener('click', resetGame);
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+            clearTimeout(computerTimeout);
+        });
+
+        showRulesButton.addEventListener('click', () => rulesModal.style.display = 'flex');
+        closeRulesButton.addEventListener('click', () => rulesModal.style.display = 'none');
+        modalCloseButton.addEventListener('click', closeModal);
+
+        window.onclick = (event) => {
+            if (event.target == rulesModal) rulesModal.style.display = 'none';
+            if (event.target == messageModal) closeModal();
+        };
+
+    </script>
+    <div class="mt-8 text-center">
+        <a href="index.html" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-full transition-colors border border-slate-600 shadow-lg">Return to Menu</a>
+    </div>
+</body>
+
+</html>
