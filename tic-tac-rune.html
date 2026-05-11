@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Rune</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nova+Mono&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            background-color: #05070a;
+        }
+
+        .rune-font {
+            font-family: 'Nova Mono', monospace;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #1e293b;
+            background-color: rgba(30, 41, 59, 0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+
+        .cell:hover {
+            background-color: rgba(51, 65, 85, 0.7);
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        .cell.x {
+            color: #22d3ee;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+            animation: markAppear 0.5s ease-out;
+        }
+
+        .cell.o {
+            color: #f472b6;
+            text-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
+            animation: markAppear 0.5s ease-out;
+        }
+
+        @keyframes markAppear {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .rune-icon {
+            position: absolute;
+            font-size: 1.2rem;
+            bottom: 5px;
+            right: 5px;
+            opacity: 0;
+            transition: all 0.5s ease;
+            color: #fbbf24;
+        }
+
+        .cell.revealed .rune-icon {
+            opacity: 1;
+            transform: scale(1.2);
+            text-shadow: 0 0 8px #fbbf24;
+        }
+
+        .reveal-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.8) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes glowExpand {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 150%; height: 150%; opacity: 0; }
+        }
+
+        .animate-glow {
+            animation: glowExpand 0.8s ease-out forwards;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: left;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 2px 1px rgba(255, 255, 255, 0.1);
+            max-width: 90%;
+            width: 450px;
+            border: 1px solid #334155;
+        }
+
+        .rune-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .rune-symbol {
+            font-size: 1.5rem;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            min-width: 3rem;
+            text-align: center;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="text-slate-200 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="glass p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+        <div class="absolute -top-24 -left-24 w-48 h-48 bg-sky-500/20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl"></div>
+
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-amber-400 to-pink-400">
+            Tic Tac Rune
+        </h1>
+        <p class="text-slate-400 text-sm text-center mb-6">Unleash ancient powers with every move.</p>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-lg mb-4 text-slate-300 font-semibold">Choose Your Path:</h2>
+            <div class="flex flex-col space-y-3">
+                <button id="vsPlayer"
+                    class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg shadow-sky-900/20">
+                    2 Players
+                </button>
+                <button id="vsComputer"
+                    class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg shadow-amber-900/20">
+                    vs Ancient One (AI)
+                </button>
+                <button id="showRules" class="text-slate-500 hover:text-slate-300 text-sm mt-2 transition-colors underline decoration-dotted">
+                    How to play?
+                </button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-3 gap-3 mx-auto" style="width: fit-content;">
+                <!-- Cells will be generated here -->
+            </div>
+
+            <div class="mt-8 mb-6">
+                <p id="status" class="text-xl text-center font-semibold h-8 text-sky-400 transition-all duration-300"></p>
+                <p id="runeStatus" class="text-sm text-center h-6 text-amber-400 italic mt-1"></p>
+            </div>
+
+            <div class="flex justify-center space-x-3">
+                <button id="resetButton"
+                    class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
+                    Reset
+                </button>
+                <button id="changeModeButton"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-lg transition duration-200">
+                    Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-6 text-amber-400 text-center">Ancient Rune Rules</h2>
+
+            <div class="space-y-4">
+                <div class="rune-item">
+                    <div class="rune-symbol rune-font">ᛖ</div>
+                    <div>
+                        <p class="font-bold text-sky-400">DUPLICATE</p>
+                        <p class="text-sm text-slate-400">Copies your piece to a random adjacent empty cell.</p>
+                    </div>
+                </div>
+                <div class="rune-item">
+                    <div class="rune-symbol rune-font">ᚦ</div>
+                    <div>
+                        <p class="font-bold text-pink-400">DESTROY</p>
+                        <p class="text-sm text-slate-400">Banishes one random opponent piece from the board.</p>
+                    </div>
+                </div>
+                <div class="rune-item">
+                    <div class="rune-symbol rune-font">ᛉ</div>
+                    <div>
+                        <p class="font-bold text-emerald-400">SHIELD</p>
+                        <p class="text-sm text-slate-400">This piece becomes immutable and cannot be affected by other runes.</p>
+                    </div>
+                </div>
+                <div class="rune-item">
+                    <div class="rune-symbol rune-font">ᚲ</div>
+                    <div>
+                        <p class="font-bold text-purple-400">SWAP</p>
+                        <p class="text-sm text-slate-400">Swaps this piece with a random opponent piece on the board.</p>
+                    </div>
+                </div>
+                <div class="rune-item">
+                    <div class="rune-symbol rune-font">ᚢ</div>
+                    <div>
+                        <p class="font-bold text-slate-500">VOID</p>
+                        <p class="text-sm text-slate-400">A dormant rune. Nothing happens.</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="mt-6 text-sm text-slate-500 text-center">Get 3 in a row to win. Runes are randomized each game.</p>
+
+            <div class="mt-8 flex justify-center">
+                <button id="closeRules" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-8 rounded-lg transition duration-200">
+                    Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win/Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-2xl font-bold mb-6"></p>
+            <button id="modalCloseButton"
+                class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-8 rounded-lg transition duration-200">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="index.html" class="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-all">
+            ← Return to Collection
+        </a>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const runeStatusElement = document.getElementById('runeStatus');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const showRulesButton = document.getElementById('showRules');
+        const closeRulesButton = document.getElementById('closeRules');
+        const rulesModal = document.getElementById('rulesModal');
+
+        // Modal elements
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Constants
+        const RUNE_TYPES = {
+            DUPLICATE: { symbol: 'ᛖ', name: 'DUPLICATE', color: '#38bdf8' },
+            DESTROY: { symbol: 'ᚦ', name: 'DESTROY', color: '#f472b6' },
+            SHIELD: { symbol: 'ᛉ', name: 'SHIELD', color: '#34d399' },
+            SWAP: { symbol: 'ᚲ', name: 'SWAP', color: '#a855f7' },
+            VOID: { symbol: 'ᚢ', name: 'VOID', color: '#64748b' }
+        };
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        // Game State
+        let board = ['', '', '', '', '', '', '', '', '']; // '', 'X', 'O'
+        let runes = []; // Rune type at each index
+        let revealedRunes = Array(9).fill(false);
+        let shieldedCells = Array(9).fill(false);
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P' or 'PvC'
+        let computerTimeout;
+
+        // --- UI Functions ---
+        function showRules() { rulesModal.style.display = 'flex'; }
+        function closeRules() { rulesModal.style.display = 'none'; }
+        function showMessage(msg) {
+            modalMessageElement.textContent = msg;
+            messageModal.style.display = 'flex';
+        }
+        function closeMessage() { messageModal.style.display = 'none'; }
+
+        // --- Game Logic ---
+        function initializeGame() {
+            board = Array(9).fill('');
+            revealedRunes = Array(9).fill(false);
+            shieldedCells = Array(9).fill(false);
+            gameActive = true;
+            currentPlayer = 'X';
+
+            // Randomly assign runes
+            const runeKeys = Object.keys(RUNE_TYPES);
+            runes = Array(9).fill(null).map(() => runeKeys[Math.floor(Math.random() * runeKeys.length)]);
+
+            statusElement.textContent = `Player X's turn`;
+            runeStatusElement.textContent = 'Seeking the first rune...';
+
+            renderBoard();
+            clearTimeout(computerTimeout);
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-xl');
+                if (mark === 'X') cell.classList.add('x');
+                if (mark === 'O') cell.classList.add('o');
+                cell.textContent = mark;
+
+                const runeIcon = document.createElement('span');
+                runeIcon.classList.add('rune-icon', 'rune-font');
+                if (revealedRunes[index]) {
+                    cell.classList.add('revealed');
+                    runeIcon.textContent = RUNE_TYPES[runes[index]].symbol;
+                    runeIcon.style.color = RUNE_TYPES[runes[index]].color;
+                    if (shieldedCells[index]) {
+                        cell.classList.add('border-emerald-500/50');
+                    }
+                }
+
+                cell.appendChild(runeIcon);
+                cell.dataset.index = index;
+                cell.addEventListener('click', () => handleCellClick(index));
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        async function handleCellClick(index) {
+            if (board[index] !== '' || !gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            await makeMove(index);
+        }
+
+        async function makeMove(index) {
+            board[index] = currentPlayer;
+            const player = currentPlayer;
+
+            // Visual feedback
+            const cell = gameBoardElement.children[index];
+            const glow = document.createElement('div');
+            glow.classList.add('reveal-glow', 'animate-glow');
+            cell.appendChild(glow);
+
+            // Reveal Rune
+            if (!revealedRunes[index]) {
+                revealedRunes[index] = true;
+                const runeType = runes[index];
+                runeStatusElement.textContent = `Rune Activated: ${RUNE_TYPES[runeType].name}`;
+                renderBoard();
+
+                await new Promise(resolve => setTimeout(resolve, 600));
+                await applyRuneEffect(index, runeType, player);
+            } else {
+                renderBoard();
+            }
+
+            if (checkWin(player)) {
+                endGame(false, player);
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                endGame(true);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "Ancient One (O)" : `Player ${currentPlayer}`} turn`;
+            runeStatusElement.textContent = '';
+
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                computerTimeout = setTimeout(computerMove, 800);
+            }
+        }
+
+        async function applyRuneEffect(index, runeType, player) {
+            const opponent = player === 'X' ? 'O' : 'X';
+
+            switch (runeType) {
+                case 'DUPLICATE':
+                    const adjacent = getAdjacentEmpty(index);
+                    if (adjacent.length > 0) {
+                        const target = adjacent[Math.floor(Math.random() * adjacent.length)];
+                        board[target] = player;
+                        // Note: Secondary placement doesn't trigger another rune
+                        // We mark it revealed VOID if it had a rune to avoid chain reactions
+                        // Or we can just let it stay hidden until someone plays there.
+                        // Let's keep it simple: it just places the piece.
+                        renderBoard();
+                    }
+                    break;
+
+                case 'DESTROY':
+                    const opponentPieces = board.map((m, i) => m === opponent && !shieldedCells[i] ? i : null).filter(i => i !== null);
+                    if (opponentPieces.length > 0) {
+                        const target = opponentPieces[Math.floor(Math.random() * opponentPieces.length)];
+                        board[target] = '';
+                        renderBoard();
+                    }
+                    break;
+
+                case 'SHIELD':
+                    shieldedCells[index] = true;
+                    renderBoard();
+                    break;
+
+                case 'SWAP':
+                    const targets = board.map((m, i) => m === opponent && !shieldedCells[i] ? i : null).filter(i => i !== null);
+                    if (targets.length > 0) {
+                        const target = targets[Math.floor(Math.random() * targets.length)];
+                        // Swap board[index] (current piece) with board[target]
+                        board[index] = opponent;
+                        board[target] = player;
+                        // Shield state stays with the CELL, not the PIECE, according to rules usually
+                        // But SHIELD rune makes "THIS piece immutable".
+                        // If it swaps, the piece is now elsewhere.
+                        // Actually, let's say SHIELD is a property of the piece at that cell.
+                        // So if we swap, the shield on the current cell should probably be removed
+                        // and the target cell might not have it.
+                        // But wait, the current cell just activated SWAP, it wasn't SHIELD.
+                        // If player piece is swapped with shielded opponent piece -> skip swap?
+                        // "targets" already filters out shieldedCells.
+                        renderBoard();
+                    }
+                    break;
+
+                case 'VOID':
+                default:
+                    break;
+            }
+        }
+
+        function getAdjacentEmpty(index) {
+            const r = Math.floor(index / 3);
+            const c = index % 3;
+            const adj = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3) {
+                        const ni = nr * 3 + nc;
+                        if (board[ni] === '') adj.push(ni);
+                    }
+                }
+            }
+            return adj;
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            if (isTie) {
+                showMessage("A stalemate! The runes remain silent.");
+            } else {
+                const winnerName = (gameMode === 'PvC' && winner === 'O') ? "The Ancient One" : `Player ${winner}`;
+                showMessage(`${winnerName} has mastered the Runes!`);
+            }
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            let bestMove = -1;
+
+            // 1. Check if AI can win immediately
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin('O')) {
+                        bestMove = i;
+                        board[i] = '';
+                        break;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            // 2. Block player win
+            if (bestMove === -1) {
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        if (checkWin('X')) {
+                            bestMove = i;
+                            board[i] = '';
+                            break;
+                        }
+                        board[i] = '';
+                    }
+                }
+            }
+
+            // 3. Strategic: Prioritize Center
+            if (bestMove === -1 && board[4] === '') {
+                bestMove = 4;
+            }
+
+            // 4. Strategic: Prioritize Corners
+            if (bestMove === -1) {
+                const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+                if (corners.length > 0) {
+                    bestMove = corners[Math.floor(Math.random() * corners.length)];
+                }
+            }
+
+            // 5. Fallback: Random
+            if (bestMove === -1) {
+                const available = board.map((m, i) => m === '' ? i : null).filter(i => i !== null);
+                if (available.length > 0) {
+                    bestMove = available[Math.floor(Math.random() * available.length)];
+                }
+            }
+
+            if (bestMove !== -1) {
+                makeMove(bestMove);
+            }
+        }
+
+        // --- Event Listeners ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        resetButton.addEventListener('click', initializeGame);
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        showRulesButton.addEventListener('click', showRules);
+        closeRulesButton.addEventListener('click', closeRules);
+        modalCloseButton.addEventListener('click', () => {
+            closeMessage();
+            initializeGame();
+        });
+
+        window.onclick = (event) => {
+            if (event.target === rulesModal) closeRules();
+            if (event.target === messageModal) closeMessage();
+        };
+
+    </script>
+</body>
+</html>
