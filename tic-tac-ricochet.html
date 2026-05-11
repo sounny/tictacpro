@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Ricochet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .board-container {
+            position: relative;
+            padding: 40px;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
+            gap: 4px;
+            background-color: #475569; /* slate-600 */
+            padding: 4px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #1e293b; /* slate-800 */
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+        }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+
+        .launcher {
+            position: absolute;
+            background-color: #334155;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            z-index: 10;
+        }
+        .launcher:hover {
+            background-color: #475569;
+        }
+        .launcher:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .launcher.top, .launcher.bottom {
+            width: 60px;
+            height: 30px;
+        }
+        .launcher.left, .launcher.right {
+            width: 30px;
+            height: 60px;
+        }
+
+        /* Piece animation */
+        .sliding-piece {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            z-index: 20;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .sliding-piece.x { color: #ef4444; }
+        .sliding-piece.o { color: #3b82f6; }
+
+        @media (max-width: 500px) {
+            .game-board {
+                grid-template-columns: repeat(5, 50px);
+                grid-template-rows: repeat(5, 50px);
+            }
+            .cell {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            .launcher.top, .launcher.bottom { width: 50px; }
+            .launcher.left, .launcher.right { height: 50px; }
+            .sliding-piece { width: 50px; height: 50px; font-size: 1.5rem; }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-xl w-full">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-600">
+            Tic Tac Ricochet
+        </h1>
+
+        <div id="setupArea" class="bg-slate-800 p-6 rounded-xl shadow-xl mb-6">
+            <div id="modeSelection" class="text-center">
+                <h2 class="text-xl mb-4">Choose Game Mode</h2>
+                <div class="flex justify-center gap-4">
+                    <button id="vsPlayer" class="bg-cyan-600 hover:bg-cyan-700 px-6 py-2 rounded-lg font-semibold transition">2 Players</button>
+                    <button id="vsComputer" class="bg-indigo-600 hover:bg-indigo-700 px-6 py-2 rounded-lg font-semibold transition">vs Computer</button>
+                </div>
+            </div>
+
+            <div id="difficultySelection" class="hidden text-center">
+                <h2 class="text-xl mb-4">Select Difficulty</h2>
+                <div class="flex flex-col gap-3">
+                    <button data-diff="easy" class="diff-btn bg-emerald-600 hover:bg-emerald-700 px-6 py-2 rounded-lg font-semibold transition">Easy</button>
+                    <button data-diff="medium" class="diff-btn bg-amber-600 hover:bg-amber-700 px-6 py-2 rounded-lg font-semibold transition">Medium</button>
+                    <button id="backToMode" class="text-slate-400 hover:text-white mt-2">← Back</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden flex flex-col items-center">
+            <div class="flex justify-between w-full mb-4 px-2">
+                <div id="turnIndicator" class="text-lg font-medium">Player X's Turn</div>
+                <button id="showRules" class="text-cyan-400 hover:underline">Rules</button>
+            </div>
+
+            <div class="board-container" id="boardContainer">
+                <!-- Launchers will be added here via JS -->
+                <div id="gameBoard" class="game-board">
+                    <!-- Cells will be added here via JS -->
+                </div>
+            </div>
+
+            <div class="flex gap-4 mt-8">
+                <button id="resetButton" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg transition font-semibold">Reset</button>
+                <button id="menuButton" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg transition font-semibold">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-400">How to Play</h2>
+            <ul class="space-y-3 text-slate-300 list-disc pl-5">
+                <li>The game is played on a 5x5 grid.</li>
+                <li>Instead of placing pieces, you <strong>launch</strong> them from the edges.</li>
+                <li>Click the arrow buttons around the board to launch a piece in that direction.</li>
+                <li>Pieces slide until they hit another piece or the edge of the board.</li>
+                <li>First player to get <strong>4 in a row</strong> (horizontally, vertically, or diagonally) wins!</li>
+            </ul>
+            <button id="closeRules" class="mt-6 w-full bg-cyan-600 hover:bg-cyan-700 py-2 rounded-lg font-bold transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="winModal" class="modal">
+        <div class="modal-content text-center">
+            <h2 id="winMessage" class="text-3xl font-bold mb-6">Player X Wins!</h2>
+            <button id="playAgain" class="w-full bg-indigo-600 hover:bg-indigo-700 py-3 rounded-lg font-bold text-lg transition">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 5;
+        const WIN_COUNT = 4;
+
+        let board = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(''));
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let isPvC = false;
+        let difficulty = 'medium';
+        let isAnimating = false;
+
+        const gameBoard = document.getElementById('gameBoard');
+        const boardContainer = document.getElementById('boardContainer');
+        const turnIndicator = document.getElementById('turnIndicator');
+        const setupArea = document.getElementById('setupArea');
+        const gameArea = document.getElementById('gameArea');
+        const modeSelection = document.getElementById('modeSelection');
+        const difficultySelection = document.getElementById('difficultySelection');
+
+        // Initialize Board
+        function initBoard() {
+            gameBoard.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${r}-${c}`;
+                    gameBoard.appendChild(cell);
+                }
+            }
+            createLaunchers();
+        }
+
+        function createLaunchers() {
+            // Remove existing launchers
+            const existingLaunchers = document.querySelectorAll('.launcher');
+            existingLaunchers.forEach(l => l.remove());
+
+            const cellSize = gameBoard.offsetWidth / GRID_SIZE;
+            const gap = 4;
+            const boardPadding = 4;
+
+            for (let i = 0; i < GRID_SIZE; i++) {
+                // Top Launchers (launching Down)
+                createLauncher('top', i, 0, i, '↓');
+                // Bottom Launchers (launching Up)
+                createLauncher('bottom', i, GRID_SIZE - 1, i, '↑');
+                // Left Launchers (launching Right)
+                createLauncher('left', i, i, 0, '→');
+                // Right Launchers (launching Left)
+                createLauncher('right', i, i, GRID_SIZE - 1, '←');
+            }
+        }
+
+        function createLauncher(side, index, row, col, arrow) {
+            const btn = document.createElement('button');
+            btn.className = `launcher ${side}`;
+            btn.innerHTML = arrow;
+
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            const cellRect = cell.getBoundingClientRect();
+            const containerRect = boardContainer.getBoundingClientRect();
+
+            const top = cellRect.top - containerRect.top;
+            const left = cellRect.left - containerRect.left;
+
+            if (side === 'top') {
+                btn.style.top = (top - 35) + 'px';
+                btn.style.left = left + 'px';
+                btn.onclick = () => handleLaunch(index, 'down');
+            } else if (side === 'bottom') {
+                btn.style.top = (top + cell.offsetHeight + 5) + 'px';
+                btn.style.left = left + 'px';
+                btn.onclick = () => handleLaunch(index, 'up');
+            } else if (side === 'left') {
+                btn.style.top = top + 'px';
+                btn.style.left = (left - 35) + 'px';
+                btn.onclick = () => handleLaunch(index, 'right');
+            } else if (side === 'right') {
+                btn.style.top = top + 'px';
+                btn.style.left = (left + cell.offsetWidth + 5) + 'px';
+                btn.onclick = () => handleLaunch(index, 'left');
+            }
+
+            boardContainer.appendChild(btn);
+        }
+
+        async function handleLaunch(index, direction) {
+            if (!gameActive || isAnimating) return;
+
+            const move = getDestination(index, direction);
+            if (!move) return; // Column/row full
+
+            isAnimating = true;
+            toggleLaunchers(false);
+
+            await animatePiece(index, direction, move.row, move.col, currentPlayer);
+
+            board[move.row][move.col] = currentPlayer;
+            updateCell(move.row, move.col, currentPlayer);
+
+            if (checkWin(move.row, move.col, currentPlayer)) {
+                endGame(currentPlayer);
+            } else if (isBoardFull()) {
+                endGame('draw');
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateTurnIndicator();
+                isAnimating = false;
+
+                if (isPvC && currentPlayer === 'O' && gameActive) {
+                    setTimeout(computerMove, 500);
+                } else {
+                    toggleLaunchers(true);
+                }
+            }
+        }
+
+        function getDestination(index, direction) {
+            let row, col, dr, dc;
+
+            if (direction === 'down') { row = -1; col = index; dr = 1; dc = 0; }
+            else if (direction === 'up') { row = GRID_SIZE; col = index; dr = -1; dc = 0; }
+            else if (direction === 'right') { row = index; col = -1; dr = 0; dc = 1; }
+            else if (direction === 'left') { row = index; col = GRID_SIZE; dr = 0; dc = -1; }
+
+            let lastValidRow = -1;
+            let lastValidCol = -1;
+
+            let currR = row + dr;
+            let currC = col + dc;
+
+            while (currR >= 0 && currR < GRID_SIZE && currC >= 0 && currC < GRID_SIZE) {
+                if (board[currR][currC] === '') {
+                    lastValidRow = currR;
+                    lastValidCol = currC;
+                    currR += dr;
+                    currC += dc;
+                } else {
+                    break;
+                }
+            }
+
+            if (lastValidRow === -1) return null;
+            return { row: lastValidRow, col: lastValidCol };
+        }
+
+        function animatePiece(index, direction, targetRow, targetCol, player) {
+            return new Promise(resolve => {
+                const piece = document.createElement('div');
+                piece.className = `sliding-piece ${player.toLowerCase()}`;
+                piece.textContent = player;
+
+                // Starting position
+                let startRow, startCol;
+                if (direction === 'down') { startRow = -1; startCol = index; }
+                else if (direction === 'up') { startRow = GRID_SIZE; startCol = index; }
+                else if (direction === 'right') { startRow = index; startCol = -1; }
+                else if (direction === 'left') { startRow = index; startCol = GRID_SIZE; }
+
+                const startCellPos = getCellPosition(startRow, startCol);
+                piece.style.left = startCellPos.left + 'px';
+                piece.style.top = startCellPos.top + 'px';
+
+                gameBoard.appendChild(piece);
+
+                // Trigger animation
+                setTimeout(() => {
+                    const targetCellPos = getCellPosition(targetRow, targetCol);
+                    piece.style.transform = `translate(${targetCellPos.left - startCellPos.left}px, ${targetCellPos.top - startCellPos.top}px)`;
+                }, 10);
+
+                piece.ontransitionend = () => {
+                    piece.remove();
+                    resolve();
+                };
+            });
+        }
+
+        function getCellPosition(row, col) {
+            // Virtual cells for start positions
+            const cellSize = document.querySelector('.cell').offsetWidth;
+            const gap = 4;
+            const padding = 4;
+
+            return {
+                left: padding + col * (cellSize + gap),
+                top: padding + row * (cellSize + gap)
+            };
+        }
+
+        function updateCell(row, col, player) {
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            cell.textContent = player;
+            cell.classList.add(player.toLowerCase());
+        }
+
+        function updateTurnIndicator() {
+            if (isPvC && currentPlayer === 'O') {
+                turnIndicator.textContent = "Computer is thinking...";
+            } else {
+                turnIndicator.textContent = `Player ${currentPlayer}'s Turn`;
+            }
+        }
+
+        function toggleLaunchers(enabled) {
+            document.querySelectorAll('.launcher').forEach(l => {
+                l.disabled = !enabled;
+            });
+        }
+
+        function checkWin(r, c, p) {
+            const directions = [
+                [[0, 1], [0, -1]], // Horizontal
+                [[1, 0], [-1, 0]], // Vertical
+                [[1, 1], [-1, -1]], // Diagonal \
+                [[1, -1], [-1, 1]]  // Diagonal /
+            ];
+
+            for (const dir of directions) {
+                let count = 1;
+                for (const [dr, dc] of dir) {
+                    let currR = r + dr;
+                    let currC = c + dc;
+                    while (currR >= 0 && currR < GRID_SIZE && currC >= 0 && currC < GRID_SIZE && board[currR][currC] === p) {
+                        count++;
+                        currR += dr;
+                        currC += dc;
+                    }
+                }
+                if (count >= WIN_COUNT) return true;
+            }
+            return false;
+        }
+
+        function isBoardFull() {
+            return board.every(row => row.every(cell => cell !== ''));
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            const winModal = document.getElementById('winModal');
+            const winMessage = document.getElementById('winMessage');
+
+            if (winner === 'draw') {
+                winMessage.textContent = "It's a Draw!";
+            } else {
+                winMessage.textContent = isPvC && winner === 'O' ? "Computer Wins!" : `Player ${winner} Wins!`;
+            }
+
+            winModal.style.display = 'flex';
+        }
+
+        // --- AI Logic ---
+        function computerMove() {
+            if (!gameActive) return;
+
+            const moves = getAllPossibleMoves();
+            if (moves.length === 0) return;
+
+            let bestMove;
+
+            if (difficulty === 'easy') {
+                bestMove = moves[Math.floor(Math.random() * moves.length)];
+            } else {
+                // Medium: 1. Win if possible, 2. Block if possible, 3. Random
+
+                // Check for win
+                for (const move of moves) {
+                    if (wouldWin(move, 'O')) {
+                        bestMove = move;
+                        break;
+                    }
+                }
+
+                // Check for block
+                if (!bestMove) {
+                    for (const move of moves) {
+                        if (wouldWin(move, 'X')) {
+                            bestMove = move;
+                            break;
+                        }
+                    }
+                }
+
+                // Default to random
+                if (!bestMove) {
+                    bestMove = moves[Math.floor(Math.random() * moves.length)];
+                }
+            }
+
+            handleLaunch(bestMove.index, bestMove.direction);
+        }
+
+        function getAllPossibleMoves() {
+            const moves = [];
+            const directions = ['up', 'down', 'left', 'right'];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (const d of directions) {
+                    if (getDestination(i, d)) {
+                        moves.push({ index: i, direction: d });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function wouldWin(move, player) {
+            const dest = getDestination(move.index, move.direction);
+            if (!dest) return false;
+
+            // Simulating move
+            board[dest.row][dest.col] = player;
+            const win = checkWin(dest.row, dest.col, player);
+            board[dest.row][dest.col] = ''; // Backtrack
+            return win;
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('vsPlayer').onclick = () => startMode(false);
+        document.getElementById('vsComputer').onclick = () => {
+            modeSelection.classList.add('hidden');
+            difficultySelection.classList.remove('hidden');
+        };
+        document.getElementById('backToMode').onclick = () => {
+            difficultySelection.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+        };
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.onclick = () => {
+                difficulty = btn.dataset.diff;
+                startMode(true);
+            };
+        });
+
+        function startMode(pvc) {
+            isPvC = pvc;
+            setupArea.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            resetGame();
+        }
+
+        function resetGame() {
+            board = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(''));
+            currentPlayer = 'X';
+            gameActive = true;
+            isAnimating = false;
+            initBoard();
+            updateTurnIndicator();
+            toggleLaunchers(true);
+            document.getElementById('winModal').style.display = 'none';
+        }
+
+        document.getElementById('resetButton').onclick = resetGame;
+        document.getElementById('playAgain').onclick = resetGame;
+        document.getElementById('menuButton').onclick = () => {
+            gameArea.classList.add('hidden');
+            setupArea.classList.remove('hidden');
+            modeSelection.classList.remove('hidden');
+            difficultySelection.classList.add('hidden');
+            gameActive = false;
+        };
+
+        // Modal Logic
+        const rulesModal = document.getElementById('rulesModal');
+        document.getElementById('showRules').onclick = () => rulesModal.style.display = 'flex';
+        document.getElementById('closeRules').onclick = () => rulesModal.style.display = 'none';
+        window.onclick = (e) => {
+            if (e.target === rulesModal) rulesModal.style.display = 'none';
+        };
+
+        // Initial setup
+        window.onload = () => {
+            initBoard();
+            // Handle window resize for launchers
+            window.onresize = () => {
+                if (gameActive || !setupArea.classList.contains('hidden')) {
+                    createLaunchers();
+                }
+            };
+        };
+
+    </script>
+</body>
+</html>
