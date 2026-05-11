@@ -52,3 +52,4 @@ Agents: Maintain this list. When you complete a variant, move it to the "Existin
 *   Tic Tac Portal
 *   Tic Tac Orbit
 *   Tic Tac Chaos
+*   Tic Tac Golem

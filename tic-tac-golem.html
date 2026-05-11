@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Golem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            background-color: #05070a;
+        }
+        .cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .cell:hover:not(.occupied) {
+            background-color: #334155;
+        }
+        .cell.x {
+            color: #ef4444;
+            text-shadow: 0 0 10px #ef4444;
+        }
+        .cell.o {
+            color: #3b82f6;
+            text-shadow: 0 0 10px #3b82f6;
+        }
+        .cell.golem {
+            background-color: #4b5563;
+            border-color: #9ca3af;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .cell.golem::after {
+            content: '🗿';
+            font-size: 2rem;
+        }
+
+        .crumbling {
+            animation: crumble 0.5s forwards;
+        }
+
+        @keyframes crumble {
+            0% { transform: scale(1); opacity: 1; filter: grayscale(0); }
+            50% { transform: scale(1.1) rotate(5deg); opacity: 0.5; filter: grayscale(0.5) contrast(1.5); }
+            100% { transform: scale(0); opacity: 0; filter: grayscale(1); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+            .status {
+                font-size: 1.125rem;
+            }
+            .mode-button, .reset-button {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .cell {
+                width: 50px;
+                height: 50px;
+                font-size: 1.75rem;
+            }
+             .status {
+                font-size: 1rem;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: left;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+            width: 500px;
+            border: 1px solid #374151;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="glass p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-gray-400 via-gray-100 to-gray-500">Tic Tac Golem</h1>
+        <div id="golemTimer" class="text-center text-gray-400 text-sm mb-6">Next Golem in: <span id="turnsToGolem" class="font-bold text-yellow-500">3</span> turns</div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-4 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="mode-button bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="mode-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition transform hover:scale-105">vs AI</button>
+            </div>
+            <button id="showRules" class="mt-4 text-gray-400 hover:text-white underline text-sm">How to Play</button>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-4 gap-2 mx-auto bg-slate-700 p-2 rounded-xl shadow-inner" style="width: fit-content;">
+                <!-- Cells will be generated here -->
+            </div>
+
+            <p id="status" class="status text-xl text-center mt-6 mb-4 h-8 text-slate-200 font-medium"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="reset-button bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Reset</button>
+                 <button id="changeModeButton" class="reset-button bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-500 border-b border-gray-700 pb-2">Rules of Tic Tac Golem</h2>
+            <ul class="space-y-3 text-gray-300 list-disc pl-5">
+                <li>Play on a <span class="text-white font-bold">4x4 grid</span>.</li>
+                <li>First to get <span class="text-white font-bold">4 in a row</span> (horizontally, vertically, or diagonally) wins.</li>
+                <li>Every <span class="text-yellow-500 font-bold">3 turns</span>, a neutral <span class="text-gray-400 font-bold">Golem 🗿</span> spawns on a random empty cell.</li>
+                <li>Golems <span class="text-rose-400 font-bold">block</span> all players and do not count towards winning lines.</li>
+                <li>On your turn, you can either place your mark OR <span class="text-emerald-400 font-bold">sacrifice your turn</span> to destroy a Golem adjacent to one of your pieces.</li>
+            </ul>
+            <button id="closeRules" class="mt-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-xl mb-6 font-bold"></p>
+            <button id="modalCloseButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-8 rounded-lg transition">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const golemTimerElement = document.getElementById('golemTimer');
+        const turnsToGolemSpan = document.getElementById('turnsToGolem');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const rulesModal = document.getElementById('rulesModal');
+        const showRulesButton = document.getElementById('showRules');
+        const closeRulesButton = document.getElementById('closeRules');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        let board = Array(16).fill(''); // '' = empty, 'X' = P1, 'O' = P2/AI, 'G' = Golem
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = '';
+        let turnCount = 0;
+        const GOLEM_SPAWN_RATE = 3;
+
+        const winningConditions = [
+            [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
+            [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15],
+            [0, 5, 10, 15], [3, 6, 9, 12]
+        ];
+
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        modalCloseButton.onclick = () => messageModal.style.display = 'none';
+        showRulesButton.onclick = () => rulesModal.style.display = 'flex';
+        closeRulesButton.onclick = () => rulesModal.style.display = 'none';
+
+        function initializeGame() {
+            board = Array(16).fill('');
+            currentPlayer = 'X';
+            gameActive = true;
+            turnCount = 0;
+            updateGolemTimer();
+            statusElement.textContent = `Player ${currentPlayer}'s turn`;
+            renderBoard();
+            golemTimerElement.classList.remove('hidden');
+        }
+
+        function updateGolemTimer() {
+            const remaining = GOLEM_SPAWN_RATE - (turnCount % GOLEM_SPAWN_RATE);
+            turnsToGolemSpan.textContent = remaining;
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, i) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-lg');
+                if (mark === 'X') {
+                    cell.classList.add('x', 'occupied');
+                    cell.textContent = 'X';
+                } else if (mark === 'O') {
+                    cell.classList.add('o', 'occupied');
+                    cell.textContent = 'O';
+                } else if (mark === 'G') {
+                    cell.classList.add('golem', 'occupied');
+                }
+
+                cell.dataset.index = i;
+                cell.onclick = () => handleCellClick(i);
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            if (board[index] === '') {
+                makeMove(index);
+            } else if (board[index] === 'G') {
+                if (canDestroyGolem(index, currentPlayer)) {
+                    destroyGolem(index);
+                }
+            }
+        }
+
+        function canDestroyGolem(golemIndex, player) {
+            const adj = getAdjacentIndices(golemIndex);
+            return adj.some(idx => board[idx] === player);
+        }
+
+        function getAdjacentIndices(index) {
+            const row = Math.floor(index / 4);
+            const col = index % 4;
+            const adjacent = [];
+
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const r = row + dr;
+                    const c = col + dc;
+                    if (r >= 0 && r < 4 && c >= 0 && c < 4) {
+                        adjacent.push(r * 4 + c);
+                    }
+                }
+            }
+            return adjacent;
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            renderBoard();
+            afterTurn();
+        }
+
+        function destroyGolem(index) {
+            const cell = gameBoardElement.children[index];
+            cell.classList.add('crumbling');
+            gameActive = false; // Temporarily disable moves during animation
+
+            setTimeout(() => {
+                board[index] = '';
+                gameActive = true;
+                renderBoard();
+                afterTurn();
+            }, 500);
+        }
+
+        function afterTurn() {
+            if (checkWin(currentPlayer)) {
+                endGame(false, currentPlayer);
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                endGame(true);
+                return;
+            }
+
+            turnCount++;
+            updateGolemTimer();
+
+            if (turnCount % GOLEM_SPAWN_RATE === 0) {
+                spawnGolem();
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusElement.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? "AI is thinking..." : `Player ${currentPlayer}'s turn`}`;
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(computerMove, 800);
+            }
+        }
+
+        function spawnGolem() {
+            const emptyCells = board.map((m, i) => m === '' ? i : null).filter(i => i !== null);
+            if (emptyCells.length > 0) {
+                const randomIdx = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                board[randomIdx] = 'G';
+                renderBoard();
+
+                // If board is full after Golem spawn and no win
+                if (board.every(cell => cell !== '')) {
+                    // We check win again just in case, though Golem can't cause a win
+                    if (!checkWin('X') && !checkWin('O')) {
+                        endGame(true);
+                    }
+                }
+            }
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("It's a Tie!");
+            } else {
+                statusElement.textContent = `${winner === 'O' && gameMode === 'PvC' ? 'AI' : 'Player ' + winner} Wins!`;
+                showModal(`${winner === 'O' && gameMode === 'PvC' ? 'AI' : 'Player ' + winner} wins the game!`);
+
+                // Highlight winning line
+                winningConditions.forEach(condition => {
+                    if (condition.every(index => board[index] === winner)) {
+                        condition.forEach(index => {
+                            gameBoardElement.children[index].classList.add('bg-yellow-500', 'text-slate-900');
+                        });
+                    }
+                });
+            }
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            // AI Logic:
+            // 1. Can AI win?
+            // 2. Can AI block Player?
+            // 3. Can AI destroy a Golem that is blocking its potential win?
+            // 4. Random move.
+
+            let move = findWinningMove('O');
+            if (move !== null) {
+                makeMove(move);
+                return;
+            }
+
+            move = findWinningMove('X');
+            if (move !== null) {
+                makeMove(move);
+                return;
+            }
+
+            // Check if destroying a Golem is beneficial
+            const golems = board.map((m, i) => m === 'G' ? i : null).filter(i => i !== null);
+            const destroyableGolems = golems.filter(gi => canDestroyGolem(gi, 'O'));
+
+            // Heuristic: if a Golem is in a line where AI has 2 pieces and 0 opponent pieces
+            for (let gi of destroyableGolems) {
+                for (let condition of winningConditions) {
+                    if (condition.includes(gi)) {
+                        const marksInLine = condition.map(idx => board[idx]);
+                        const aiMarks = marksInLine.filter(m => m === 'O').length;
+                        const playerMarks = marksInLine.filter(m => m === 'X').length;
+                        if (aiMarks >= 2 && playerMarks === 0) {
+                            destroyGolem(gi);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: Random move or destroy any Golem with 20% chance if available
+            if (destroyableGolems.length > 0 && Math.random() < 0.2) {
+                destroyGolem(destroyableGolems[Math.floor(Math.random() * destroyableGolems.length)]);
+            } else {
+                const emptyCells = board.map((m, i) => m === '' ? i : null).filter(i => i !== null);
+                if (emptyCells.length > 0) {
+                    // Prefer center spots
+                    const centerSpots = [5, 6, 9, 10];
+                    const availableCenter = centerSpots.filter(i => board[i] === '');
+                    if (availableCenter.length > 0 && Math.random() < 0.7) {
+                        makeMove(availableCenter[Math.floor(Math.random() * availableCenter.length)]);
+                    } else {
+                        makeMove(emptyCells[Math.floor(Math.random() * emptyCells.length)]);
+                    }
+                }
+            }
+        }
+
+        function findWinningMove(player) {
+            for (let i = 0; i < 16; i++) {
+                if (board[i] === '') {
+                    board[i] = player;
+                    if (checkWin(player)) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            return null;
+        }
+
+        vsPlayerButton.onclick = () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        };
+
+        vsComputerButton.onclick = () => {
+            gameMode = 'PvC';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        };
+
+        resetButton.onclick = initializeGame;
+        changeModeButton.onclick = () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+            golemTimerElement.classList.add('hidden');
+        };
+
+        // Initialize
+        golemTimerElement.classList.add('hidden');
+
+    </script>
+    <div class="mt-8 text-center">
+        <a href="index.html" class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition border border-gray-700">Back to Menu</a>
+    </div>
+</body>
+</html>
