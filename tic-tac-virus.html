@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Virus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #334155;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .cell:hover {
+            background-color: #334155;
+        }
+        .cell.x {
+            color: #22c55e;
+            text-shadow: 0 0 10px #22c55e;
+        }
+        .cell.o {
+            color: #a855f7;
+            text-shadow: 0 0 10px #a855f7;
+        }
+        .cell.ix {
+            color: #15803d;
+            opacity: 0.8;
+            animation: pulse-green 2s infinite;
+        }
+        .cell.io {
+            color: #7e22ce;
+            opacity: 0.8;
+            animation: pulse-purple 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); text-shadow: 0 0 5px #22c55e; }
+            50% { transform: scale(1); text-shadow: 0 0 15px #22c55e; }
+            100% { transform: scale(0.95); text-shadow: 0 0 5px #22c55e; }
+        }
+
+        @keyframes pulse-purple {
+            0% { transform: scale(0.95); text-shadow: 0 0 5px #a855f7; }
+            50% { transform: scale(1); text-shadow: 0 0 15px #a855f7; }
+            100% { transform: scale(0.95); text-shadow: 0 0 5px #a855f7; }
+        }
+
+        @media (max-width: 600px) {
+            .cell { width: 50px; height: 50px; font-size: 1.75rem; }
+        }
+        @media (max-width: 400px) {
+            .cell { width: 40px; height: 40px; font-size: 1.5rem; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            width: 400px;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-purple-500">
+            Tic Tac Virus
+        </h1>
+        <div class="flex justify-center mb-6">
+            <button id="showRules" class="text-xs text-slate-400 hover:text-white underline">Rules & Mechanics</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-4">Choose Game Mode:</h2>
+            <div class="flex flex-col space-y-3">
+                <button id="vsPlayer" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-4">Select Difficulty:</h2>
+            <div class="flex flex-col space-y-3">
+                <button id="easyDiff" class="bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105">Easy</button>
+                <button id="medDiff" class="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff" class="bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-sm text-slate-400 hover:text-white">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-5 gap-1 mx-auto bg-slate-700 p-1 rounded-lg shadow-inner" style="width: fit-content;">
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 font-medium"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2 px-6 rounded-lg transition transform hover:scale-105">Reset</button>
+                 <button id="changeModeButton" class="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-6 rounded-lg transition transform hover:scale-105">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-green-400">Biological Warfare Rules</h2>
+            <ul class="text-left space-y-3 text-sm">
+                <li><span class="font-bold text-white">Grid:</span> 5x5 arena.</li>
+                <li><span class="font-bold text-white">Winning:</span> Get <span class="text-yellow-400">4 in a row</span> (placed or infected).</li>
+                <li><span class="font-bold text-white text-green-400">Infection:</span> Each placed piece infects 1 random adjacent empty cell every turn.</li>
+                <li><span class="font-bold text-white text-purple-400">Curing:</span> Place a piece next to an opponent's infected cell to cure it (removes it from the board).</li>
+                <li><span class="font-bold text-white">Strategy:</span> Infected cells count towards your win, but they are fragile!</li>
+            </ul>
+            <button id="closeRules" class="mt-6 w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-lg transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-xl font-bold mb-6"></p>
+            <button id="modalCloseButton" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-lg transition">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+
+        const rulesModal = document.getElementById('rulesModal');
+        const showRules = document.getElementById('showRules');
+        const closeRules = document.getElementById('closeRules');
+
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        let board = Array(25).fill(''); // '', 'X', 'O', 'iX', 'iO'
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = ''; // '2P', 'PvC'
+        let difficulty = 'med';
+
+        window.initializeGame = initializeGame;
+        window.makeMove = makeMove;
+        window.checkWin = checkWin;
+        window.renderBoard = renderBoard;
+
+        // Define these on window so tests can see them
+        Object.defineProperty(window, 'board', { get: () => board, set: (v) => board = v });
+        Object.defineProperty(window, 'currentPlayer', { get: () => currentPlayer, set: (v) => currentPlayer = v });
+        Object.defineProperty(window, 'gameActive', { get: () => gameActive, set: (v) => gameActive = v });
+
+        function initializeGame() {
+            board = Array(25).fill('');
+            gameActive = true;
+            currentPlayer = 'X';
+            updateStatus();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded');
+                const val = board[i];
+                if (val === 'X') {
+                    cell.classList.add('x');
+                    cell.textContent = 'X';
+                } else if (val === 'O') {
+                    cell.classList.add('o');
+                    cell.textContent = 'O';
+                } else if (val === 'iX') {
+                    cell.classList.add('ix');
+                    cell.textContent = 'x';
+                } else if (val === 'iO') {
+                    cell.classList.add('io');
+                    cell.textContent = 'o';
+                }
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleMove(i));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function handleMove(index) {
+            if (!gameActive || board[index] === 'X' || board[index] === 'O') return;
+
+            makeMove(index, currentPlayer);
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(computerMove, 600);
+            }
+        }
+
+        function makeMove(index, player) {
+            // Place piece (overwrite infected if any)
+            board[index] = player;
+
+            // Cure adjacent infected opponent cells
+            cureAdjacent(index, player);
+
+            // Spread infection for the player who just moved
+            spreadInfection(player);
+
+            renderBoard();
+
+            if (checkWin(player)) {
+                endGame(player + " Wins!");
+            } else if (board.every(c => c !== '')) {
+                // Technically with infection/curing, it might not ever fill up,
+                // but let's check for full board just in case.
+                endGame("It's a Tie!");
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateStatus();
+            }
+        }
+
+        function cureAdjacent(index, player) {
+            const opponentInfected = player === 'X' ? 'iO' : 'iX';
+            const neighbors = getNeighbors(index);
+            neighbors.forEach(n => {
+                if (board[n] === opponentInfected) {
+                    board[n] = '';
+                }
+            });
+        }
+
+        function spreadInfection(player) {
+            const infectedType = 'i' + player;
+            const placedIndices = [];
+            board.forEach((val, i) => {
+                if (val === player) placedIndices.push(i);
+            });
+
+            placedIndices.forEach(idx => {
+                const emptyNeighbors = getNeighbors(idx, true).filter(n => board[n] === '');
+                if (emptyNeighbors.length > 0) {
+                    const randomEmpty = emptyNeighbors[Math.floor(Math.random() * emptyNeighbors.length)];
+                    board[randomEmpty] = infectedType;
+                }
+            });
+        }
+
+        function getNeighbors(index, orthogonalOnly = false) {
+            const r = Math.floor(index / 5);
+            const c = index % 5;
+            const neighbors = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    if (orthogonalOnly && Math.abs(dr) + Math.abs(dc) > 1) continue;
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
+                        neighbors.push(nr * 5 + nc);
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        function checkWin(player) {
+            const infectedType = 'i' + player;
+            const isPlayerCell = (val) => val === player || val === infectedType;
+
+            // Winning conditions for 4 in a row in a 5x5 grid
+            const lines = [];
+            // Rows
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 2; c++) {
+                    lines.push([r*5+c, r*5+c+1, r*5+c+2, r*5+c+3]);
+                }
+            }
+            // Columns
+            for (let c = 0; c < 5; c++) {
+                for (let r = 0; r < 2; r++) {
+                    lines.push([r*5+c, (r+1)*5+c, (r+2)*5+c, (r+3)*5+c]);
+                }
+            }
+            // Diagonals
+            for (let r = 0; r < 2; r++) {
+                for (let c = 0; c < 2; c++) {
+                    lines.push([r*5+c, (r+1)*5+c+1, (r+2)*5+c+2, (r+3)*5+c+3]);
+                }
+                for (let c = 3; c < 5; c++) {
+                    lines.push([r*5+c, (r+1)*5+c-1, (r+2)*5+c-2, (r+3)*5+c-3]);
+                }
+            }
+
+            return lines.some(line => line.every(idx => isPlayerCell(board[idx])));
+        }
+
+        function updateStatus() {
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Virus evolving...";
+                statusElement.className = "text-xl text-center mt-6 mb-4 h-8 font-medium text-purple-400";
+            } else {
+                statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+                statusElement.className = `text-xl text-center mt-6 mb-4 h-8 font-medium ${currentPlayer === 'X' ? 'text-green-400' : 'text-purple-400'}`;
+            }
+        }
+
+        function endGame(msg) {
+            gameActive = false;
+            modalMessageElement.textContent = msg;
+            messageModal.style.display = 'flex';
+            statusElement.textContent = msg;
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            let bestMove = -1;
+            const available = board.map((v, i) => (v !== 'X' && v !== 'O' ? i : null)).filter(v => v !== null);
+
+            if (difficulty === 'easy') {
+                bestMove = available[Math.floor(Math.random() * available.length)];
+            } else {
+                // Medium/Hard AI
+                // 1. Win if possible
+                for (let move of available) {
+                    let tempBoard = [...board];
+                    tempBoard[move] = 'O';
+                    if (checkWinWithBoard(tempBoard, 'O')) {
+                        bestMove = move;
+                        break;
+                    }
+                }
+
+                // 2. Block player win
+                if (bestMove === -1) {
+                    for (let move of available) {
+                        let tempBoard = [...board];
+                        tempBoard[move] = 'X';
+                        if (checkWinWithBoard(tempBoard, 'X')) {
+                            bestMove = move;
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Strategic moves (taking center or curing)
+                if (bestMove === -1 && difficulty === 'hard') {
+                    // Prioritize curing
+                    const curingMoves = available.filter(move => {
+                        const neighbors = getNeighbors(move);
+                        return neighbors.some(n => board[n] === 'iX');
+                    });
+                    if (curingMoves.length > 0) {
+                        bestMove = curingMoves[Math.floor(Math.random() * curingMoves.length)];
+                    }
+                }
+
+                if (bestMove === -1) {
+                    // Center preference
+                    const centers = [12, 6, 7, 8, 11, 13, 16, 17, 18];
+                    for (let c of centers) {
+                        if (available.includes(c)) {
+                            bestMove = c;
+                            break;
+                        }
+                    }
+                }
+
+                if (bestMove === -1) {
+                    bestMove = available[Math.floor(Math.random() * available.length)];
+                }
+            }
+
+            if (bestMove !== -1) makeMove(bestMove, 'O');
+        }
+
+        function checkWinWithBoard(b, player) {
+            const infectedType = 'i' + player;
+            const isPlayerCell = (val) => val === player || val === infectedType;
+            const lines = [];
+            for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) lines.push([r*5+c, r*5+c+1, r*5+c+2, r*5+c+3]);
+            for (let c = 0; c < 5; c++) for (let r = 0; r < 2; r++) lines.push([r*5+c, (r+1)*5+c, (r+2)*5+c, (r+3)*5+c]);
+            for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) lines.push([r*5+c, (r+1)*5+c+1, (r+2)*5+c+2, (r+3)*5+c+3]);
+            for (let r = 0; r < 2; r++) for (let c = 3; c < 5; c++) lines.push([r*5+c, (r+1)*5+c-1, (r+2)*5+c-2, (r+3)*5+c-3]);
+            return lines.some(line => line.every(idx => isPlayerCell(b[idx])));
+        }
+
+        // UI Event Listeners
+        document.getElementById('vsPlayer').onclick = () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        };
+        document.getElementById('vsComputer').onclick = () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        };
+        document.getElementById('backToMode').onclick = () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+        document.getElementById('easyDiff').onclick = () => startPvC('easy');
+        document.getElementById('medDiff').onclick = () => startPvC('med');
+        document.getElementById('hardDiff').onclick = () => startPvC('hard');
+
+        function startPvC(diff) {
+            difficulty = diff;
+            gameMode = 'PvC';
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        }
+
+        resetButton.onclick = initializeGame;
+        changeModeButton.onclick = () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+
+        showRules.onclick = () => rulesModal.style.display = 'flex';
+        closeRules.onclick = () => rulesModal.style.display = 'none';
+        modalCloseButton.onclick = () => {
+            messageModal.style.display = 'none';
+            initializeGame();
+        };
+
+        window.onclick = (e) => {
+            if (e.target === rulesModal) rulesModal.style.display = 'none';
+            if (e.target === messageModal) messageModal.style.display = 'none';
+        };
+
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition">Back to Menu</a>
+    </div>
+</body>
+</html>
