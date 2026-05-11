@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Siege</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+        }
+        .cell:hover {
+            background-color: #334155;
+        }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+        .cell.wall {
+            background-color: #4b5563;
+            color: #d1d5db;
+            cursor: not-allowed;
+        }
+        .cell.last-move {
+            outline: 2px solid #fbbf24;
+            outline-offset: -2px;
+        }
+
+        @media (max-width: 600px) {
+            .cell { width: 50px; height: 50px; font-size: 1.75rem; }
+        }
+        @media (max-width: 400px) {
+            .cell { width: 40px; height: 40px; font-size: 1.5rem; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600">Tic Tac Siege</h1>
+        <div class="text-center mb-6">
+            <button id="showRules" class="text-slate-400 hover:text-white text-sm underline">How to Play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Easy</button>
+                <button id="mediumDiff" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Hard (Minimax)</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div class="flex justify-between mb-4 px-2 text-sm font-medium">
+                <div id="playerXStatus" class="text-red-400">Player X Walls: 3</div>
+                <div id="playerOStatus" class="text-blue-400">Player O Walls: 3</div>
+            </div>
+
+            <div id="gameBoard" class="grid grid-cols-5 gap-1.5 mx-auto bg-slate-500 rounded-lg overflow-hidden shadow-lg" style="width: fit-content;"></div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+
+            <div class="flex flex-col space-y-3">
+                <button id="wallButton" class="w-full py-3 rounded-lg font-bold shadow-md transition duration-150 transform hover:scale-105 bg-slate-600 hover:bg-slate-500 text-white">
+                    Place Wall
+                </button>
+                <div class="flex justify-center space-x-3">
+                    <button id="resetButton" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Reset</button>
+                    <button id="changeModeButton" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-orange-500">How to Play</h2>
+            <ul class="text-left space-y-2 mb-6 text-slate-300">
+                <li>• Players alternate turns on a 5x5 grid.</li>
+                <li>• On your turn, you can place your piece (X/O) <b>OR</b> a Wall.</li>
+                <li>• Each player has <b>3 Walls</b> per game.</li>
+                <li>• Walls block a cell permanently and cannot be moved.</li>
+                <li>• First to get <b>4 in a row</b> (horizontally, vertically, or diagonally) wins!</li>
+            </ul>
+            <button id="closeRules" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg w-full">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-xl mb-6 font-semibold"></p>
+            <button id="modalCloseButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-8 rounded-lg">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const wallButton = document.getElementById('wallButton');
+        const playerXStatus = document.getElementById('playerXStatus');
+        const playerOStatus = document.getElementById('playerOStatus');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+        const rulesModal = document.getElementById('rulesModal');
+
+        let board = Array(25).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = '';
+        let difficulty = 'medium';
+        let wallsLeft = { 'X': 3, 'O': 3 };
+        let placingWall = false;
+
+        const WIN_COUNT = 4;
+        const GRID_SIZE = 5;
+
+        function showModal(msg) {
+            modalMessageElement.textContent = msg;
+            messageModal.style.display = 'flex';
+        }
+
+        document.getElementById('showRules').onclick = () => rulesModal.style.display = 'flex';
+        document.getElementById('closeRules').onclick = () => rulesModal.style.display = 'none';
+        modalCloseButton.onclick = () => messageModal.style.display = 'none';
+
+        function initializeGame() {
+            board = Array(25).fill('');
+            gameActive = true;
+            wallsLeft = { 'X': 3, 'O': 3 };
+            placingWall = false;
+            updateStatus();
+            renderBoard();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                computerMove();
+            }
+        }
+
+        function updateStatus() {
+            playerXStatus.textContent = `Player X Walls: ${wallsLeft['X']}`;
+            playerOStatus.textContent = `Player O Walls: ${wallsLeft['O']}`;
+
+            if (gameActive) {
+                const turnText = (gameMode === 'PvC' && currentPlayer === 'O') ? "Computer's turn" : `Player ${currentPlayer}'s turn`;
+                statusElement.textContent = turnText + (placingWall ? " (Placing Wall)" : "");
+                wallButton.textContent = placingWall ? "Cancel Wall" : "Place Wall";
+                wallButton.disabled = wallsLeft[currentPlayer] === 0 || (gameMode === 'PvC' && currentPlayer === 'O');
+                wallButton.style.opacity = wallButton.disabled ? "0.5" : "1";
+            }
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((cell, i) => {
+                const div = document.createElement('div');
+                div.className = 'cell rounded-md';
+                div.setAttribute('data-index', i);
+                if (cell === 'X') div.classList.add('x');
+                if (cell === 'O') div.classList.add('o');
+                if (cell === 'W') div.classList.add('wall');
+                div.textContent = cell === 'W' ? '■' : cell;
+                div.onclick = () => handleCellClick(i);
+                gameBoardElement.appendChild(div);
+            });
+        }
+
+        function handleCellClick(i) {
+            if (!gameActive || board[i] !== '') return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            if (placingWall) {
+                board[i] = 'W';
+                wallsLeft[currentPlayer]--;
+                placingWall = false;
+            } else {
+                board[i] = currentPlayer;
+            }
+
+            afterMove();
+        }
+
+        function afterMove() {
+            renderBoard();
+            if (checkWin(board)) {
+                endGame(currentPlayer);
+                return;
+            }
+            if (board.every(c => c !== '')) {
+                endGame(null);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(computerMove, 600);
+            }
+        }
+
+        function checkWin(b) {
+            const lines = getLines();
+            for (let line of lines) {
+                let count = 0;
+                let last = '';
+                for (let idx of line) {
+                    if (b[idx] !== '' && b[idx] !== 'W' && b[idx] === last) {
+                        count++;
+                        if (count >= WIN_COUNT) return true;
+                    } else {
+                        count = 1;
+                        last = b[idx];
+                    }
+                }
+            }
+            return false;
+        }
+
+        function getLines() {
+            const lines = [];
+            // Rows
+            for (let r = 0; r < 5; r++) {
+                lines.push([r*5, r*5+1, r*5+2, r*5+3, r*5+4]);
+            }
+            // Cols
+            for (let c = 0; c < 5; c++) {
+                lines.push([c, c+5, c+10, c+15, c+20]);
+            }
+            // Diagonals
+            lines.push([0, 6, 12, 18, 24]);
+            lines.push([4, 8, 12, 16, 20]);
+            lines.push([1, 7, 13, 19]);
+            lines.push([5, 11, 17, 23]);
+            lines.push([3, 7, 11, 15]);
+            lines.push([9, 13, 17, 21]);
+            // Small diagonals
+            lines.push([2, 8, 14]); // wait, only 4 in a row. So lines < 4 are useless
+            // Filter lines shorter than WIN_COUNT
+            return lines.filter(l => l.length >= WIN_COUNT);
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            if (winner) {
+                const name = (gameMode === 'PvC' && winner === 'O') ? "Computer" : `Player ${winner}`;
+                statusElement.textContent = `${name} Wins!`;
+                showModal(`${name} has claimed victory in the siege!`);
+            } else {
+                statusElement.textContent = "Siege Stalemate!";
+                showModal("Neither side could break through. It's a draw!");
+            }
+            updateStatus();
+        }
+
+        wallButton.onclick = () => {
+            if (!gameActive) return;
+            placingWall = !placingWall;
+            updateStatus();
+        };
+
+        // --- AI Logic ---
+        function computerMove() {
+            if (!gameActive) return;
+
+            let move;
+            if (difficulty === 'easy') {
+                move = getRandomMove();
+            } else if (difficulty === 'medium') {
+                move = getMediumMove();
+            } else {
+                move = getHardMove();
+            }
+
+            if (move.type === 'wall') {
+                board[move.index] = 'W';
+                wallsLeft['O']--;
+            } else {
+                board[move.index] = 'O';
+            }
+            afterMove();
+        }
+
+        function getRandomMove() {
+            const available = board.map((c, i) => c === '' ? i : null).filter(i => i !== null);
+            const index = available[Math.floor(Math.random() * available.length)];
+            const type = (wallsLeft['O'] > 0 && Math.random() < 0.2) ? 'wall' : 'piece';
+            return { index, type };
+        }
+
+        function getMediumMove() {
+            const available = board.map((c, i) => c === '' ? i : null).filter(i => i !== null);
+
+            // 1. Can I win?
+            for (let i of available) {
+                board[i] = 'O';
+                if (checkWin(board)) { board[i] = ''; return { index: i, type: 'piece' }; }
+                board[i] = '';
+            }
+
+            // 2. Must I block?
+            for (let i of available) {
+                board[i] = 'X';
+                if (checkWin(board)) {
+                    board[i] = '';
+                    // Should I block with a wall or a piece?
+                    // Walls are better for blocking if we have them.
+                    return { index: i, type: wallsLeft['O'] > 0 ? 'wall' : 'piece' };
+                }
+                board[i] = '';
+            }
+
+            // 3. Center
+            if (board[12] === '') return { index: 12, type: 'piece' };
+
+            return getRandomMove();
+        }
+
+        function getHardMove() {
+            // Minimax on 5x5 is too slow. Using a limited depth search with heuristic.
+            const result = minimax(board, 4, -Infinity, Infinity, true);
+            return result.move;
+        }
+
+        function minimax(currBoard, depth, alpha, beta, isMaximizing) {
+            if (checkWin(currBoard)) return { score: isMaximizing ? -1000 : 1000 };
+            if (depth === 0 || currBoard.every(c => c !== '')) return { score: evaluate(currBoard) };
+
+            const available = currBoard.map((c, i) => c === '' ? i : null).filter(i => i !== null);
+            let bestMove = null;
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (let i of available) {
+                    // Try piece
+                    currBoard[i] = 'O';
+                    let eval = minimax(currBoard, depth - 1, alpha, beta, false).score;
+                    currBoard[i] = '';
+                    if (eval > maxEval) { maxEval = eval; bestMove = { index: i, type: 'piece' }; }
+                    alpha = Math.max(alpha, eval);
+                    if (beta <= alpha) break;
+
+                    // Try wall if available
+                    if (wallsLeft['O'] > 0 && depth > 2) {
+                         currBoard[i] = 'W';
+                         wallsLeft['O']--;
+                         let wEval = minimax(currBoard, depth - 1, alpha, beta, false).score;
+                         wallsLeft['O']++;
+                         currBoard[i] = '';
+                         if (wEval > maxEval) { maxEval = wEval; bestMove = { index: i, type: 'wall' }; }
+                         alpha = Math.max(alpha, wEval);
+                         if (beta <= alpha) break;
+                    }
+                }
+                return { score: maxEval, move: bestMove };
+            } else {
+                let minEval = Infinity;
+                for (let i of available) {
+                    currBoard[i] = 'X';
+                    let eval = minimax(currBoard, depth - 1, alpha, beta, true).score;
+                    currBoard[i] = '';
+                    if (eval < minEval) { minEval = eval; bestMove = { index: i, type: 'piece' }; }
+                    beta = Math.min(beta, eval);
+                    if (beta <= alpha) break;
+                }
+                return { score: minEval, move: bestMove };
+            }
+        }
+
+        function evaluate(b) {
+            // Very simple heuristic for performance
+            let score = 0;
+            const lines = getLines();
+            for (let line of lines) {
+                let xCount = 0, oCount = 0, wCount = 0;
+                for (let idx of line) {
+                    if (b[idx] === 'X') xCount++;
+                    else if (b[idx] === 'O') oCount++;
+                    else if (b[idx] === 'W') wCount++;
+                }
+                if (wCount === 0) {
+                    if (oCount > 0 && xCount === 0) score += Math.pow(10, oCount);
+                    if (xCount > 0 && oCount === 0) score -= Math.pow(10, xCount);
+                }
+            }
+            return score;
+        }
+
+        // --- Menu Logic ---
+        document.getElementById('vsPlayer').onclick = () => {
+            gameMode = '2P';
+            currentPlayer = 'X';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        };
+
+        document.getElementById('vsComputer').onclick = () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        };
+
+        document.getElementById('backToMode').onclick = () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+
+        document.getElementById('easyDiff').onclick = () => startPvC('easy');
+        document.getElementById('mediumDiff').onclick = () => startPvC('medium');
+        document.getElementById('hardDiff').onclick = () => startPvC('hard');
+
+        function startPvC(diff) {
+            gameMode = 'PvC';
+            difficulty = diff;
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        }
+
+        resetButton.onclick = () => {
+            currentPlayer = (gameMode === 'PvC') ? (Math.random() < 0.5 ? 'X' : 'O') : 'X';
+            initializeGame();
+        };
+
+        changeModeButton.onclick = () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        };
+
+    </script>
+</body>
+</html>
