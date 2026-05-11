@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Maze</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #1e293b; /* slate-800 */
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+        .cell:hover {
+            background-color: #334155; /* slate-700 */
+        }
+        .cell.x {
+            color: #ef4444; /* red-500 */
+        }
+        .cell.o {
+            color: #3b82f6; /* blue-500 */
+        }
+
+        /* Wall styles */
+        .wall-top { border-top: 4px solid #facc15 !important; }
+        .wall-bottom { border-bottom: 4px solid #facc15 !important; }
+        .wall-left { border-left: 4px solid #facc15 !important; }
+        .wall-right { border-right: 4px solid #facc15 !important; }
+
+        .cell-border {
+            border: 1px solid #374151; /* gray-700 */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 50px;
+                height: 50px;
+                font-size: 1.75rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .cell {
+                width: 40px;
+                height: 40px;
+                font-size: 1.5rem;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #1e293b;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">Tic Tac Maze</h1>
+
+        <div class="flex justify-center mb-4">
+            <button id="showRules" class="text-sm text-slate-400 hover:text-white underline">How to play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md">Easy</button>
+                <button id="mediumDiff" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md">Medium</button>
+                <button id="hardDiff" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-5 mx-auto bg-slate-900 p-1 rounded-lg shadow-inner" style="width: fit-content;">
+                <!-- Cells will be generated here -->
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300 font-medium"></p>
+
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                 <button id="resetButton" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg transition transform hover:scale-105 shadow-md">Reset Game</button>
+                 <button id="newMazeButton" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold py-2 rounded-lg transition transform hover:scale-105 shadow-md">New Maze</button>
+                 <button id="changeModeButton" class="col-span-2 bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 rounded-lg transition shadow-md">Change Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-400">Tic Tac Maze Rules</h2>
+            <ul class="text-left text-slate-300 space-y-2 mb-6">
+                <li>• The game is played on a 5x5 grid.</li>
+                <li>• Random walls are generated at the start of each game.</li>
+                <li>• To win, you must get 3 marks in a row (horizontal or vertical).</li>
+                <li>• IMPORTANT: There must be NO WALLS between any of the 3 marks in your winning line.</li>
+                <li>• Diagonals are not allowed in this variant due to the maze walls.</li>
+            </ul>
+            <button id="closeRules" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-6 rounded-md transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal (for game over) -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-xl mb-6 font-semibold"></p>
+            <button id="modalCloseButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-8 rounded-md transition">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const newMazeButton = document.getElementById('newMazeButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const backToModeButton = document.getElementById('backToMode');
+
+        const rulesModal = document.getElementById('rulesModal');
+        const showRulesBtn = document.getElementById('showRules');
+        const closeRulesBtn = document.getElementById('closeRules');
+
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State
+        let board = Array(25).fill('');
+        let vWalls = Array(5).fill().map(() => Array(4).fill(false));
+        let hWalls = Array(4).fill().map(() => Array(5).fill(false));
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = '';
+        let difficulty = 'medium';
+
+        // --- Maze Generation ---
+        function generateMaze() {
+            vWalls = Array(5).fill().map(() => Array(4).fill(false));
+            hWalls = Array(4).fill().map(() => Array(5).fill(false));
+
+            // Randomly place about 15 walls
+            let wallsPlaced = 0;
+            while (wallsPlaced < 15) {
+                const isVertical = Math.random() < 0.5;
+                if (isVertical) {
+                    const r = Math.floor(Math.random() * 5);
+                    const c = Math.floor(Math.random() * 4);
+                    if (!vWalls[r][c]) {
+                        vWalls[r][c] = true;
+                        wallsPlaced++;
+                    }
+                } else {
+                    const r = Math.floor(Math.random() * 4);
+                    const c = Math.floor(Math.random() * 5);
+                    if (!hWalls[r][c]) {
+                        hWalls[r][c] = true;
+                        wallsPlaced++;
+                    }
+                }
+            }
+        }
+
+        // --- Win Checking ---
+        function checkWin(player, checkBoard = board) {
+            // Check Rows (3 in a row)
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const idx1 = r * 5 + c;
+                    const idx2 = r * 5 + c + 1;
+                    const idx3 = r * 5 + c + 2;
+
+                    if (checkBoard[idx1] === player && checkBoard[idx2] === player && checkBoard[idx3] === player) {
+                        // Check walls between c and c+1, and between c+1 and c+2
+                        if (!vWalls[r][c] && !vWalls[r][c+1]) {
+                            return [idx1, idx2, idx3];
+                        }
+                    }
+                }
+            }
+
+            // Check Columns (3 in a row)
+            for (let c = 0; c < 5; c++) {
+                for (let r = 0; r < 3; r++) {
+                    const idx1 = r * 5 + c;
+                    const idx2 = (r + 1) * 5 + c;
+                    const idx3 = (r + 2) * 5 + c;
+
+                    if (checkBoard[idx1] === player && checkBoard[idx2] === player && checkBoard[idx3] === player) {
+                        // Check walls between r and r+1, and between r+1 and r+2
+                        if (!hWalls[r][c] && !hWalls[r+1][c]) {
+                            return [idx1, idx2, idx3];
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // --- Game Actions ---
+        function initializeGame(keepMaze = false) {
+            board = Array(25).fill('');
+            gameActive = true;
+            if (!keepMaze) generateMaze();
+            renderBoard();
+            updateStatus();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                computerTurn();
+            }
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const r = Math.floor(i / 5);
+                const c = i % 5;
+
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'cell-border');
+                if (board[i] === 'X') cell.classList.add('x');
+                if (board[i] === 'O') cell.classList.add('o');
+                cell.textContent = board[i];
+                cell.dataset.index = i;
+
+                // Add walls as borders
+                if (c > 0 && vWalls[r][c-1]) cell.classList.add('wall-left');
+                if (c < 4 && vWalls[r][c]) cell.classList.add('wall-right');
+                if (r > 0 && hWalls[r-1][c]) cell.classList.add('wall-top');
+                if (r < 4 && hWalls[r][c]) cell.classList.add('wall-bottom');
+
+                cell.addEventListener('click', () => handleCellClick(i));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive || board[index] !== '') return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            renderBoard();
+
+            const winningLine = checkWin(currentPlayer);
+            if (winningLine) {
+                endGame(false, currentPlayer, winningLine);
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                endGame(true);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                computerTurn();
+            }
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Computer is thinking...";
+            } else {
+                statusElement.textContent = `Player ${currentPlayer}'s turn`;
+            }
+        }
+
+        function endGame(isTie, winner = null, line = null) {
+            gameActive = false;
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("It's a Tie!");
+            } else {
+                statusElement.textContent = `Player ${winner} Wins!`;
+                showModal(`Player ${winner} Wins!`);
+                if (line) {
+                    line.forEach(idx => {
+                        gameBoardElement.children[idx].classList.add('bg-yellow-400/20');
+                    });
+                }
+            }
+        }
+
+        // --- AI Logic ---
+        function computerTurn() {
+            setTimeout(() => {
+                let move;
+                if (difficulty === 'easy') {
+                    move = getRandomMove();
+                } else if (difficulty === 'medium') {
+                    move = getSmartMove();
+                } else {
+                    move = getBestMove();
+                }
+                makeMove(move);
+            }, 600);
+        }
+
+        function getRandomMove() {
+            const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getSmartMove() {
+            // 1. Can I win?
+            for (let i = 0; i < 25; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin('O')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            // 2. Can they win? Block them
+            for (let i = 0; i < 25; i++) {
+                if (board[i] === '') {
+                    board[i] = 'X';
+                    if (checkWin('X')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            // 3. Center if available
+            if (board[12] === '') return 12;
+
+            return getRandomMove();
+        }
+
+        function getBestMove() {
+            // Simple depth-limited minimax or enhanced smart move
+            // For 5x5, let's just use a scoring system
+            let bestScore = -Infinity;
+            let move = -1;
+
+            const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+
+            for (let m of available) {
+                board[m] = 'O';
+                let score = evaluateBoard('O');
+                if (checkWin('O')) score += 1000;
+
+                // Block opponent
+                board[m] = 'X';
+                if (checkWin('X')) score += 500;
+
+                board[m] = '';
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    move = m;
+                }
+            }
+            return move !== -1 ? move : getRandomMove();
+        }
+
+        function evaluateBoard(player) {
+            // Basic heuristic: count potential 3-in-a-rows that are not blocked by walls or opponent
+            let score = 0;
+            const opponent = player === 'X' ? 'O' : 'X';
+
+            // Check rows
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 3; c++) {
+                    if (!vWalls[r][c] && !vWalls[r][c+1]) {
+                        const line = [board[r*5+c], board[r*5+c+1], board[r*5+c+2]];
+                        if (!line.includes(opponent)) {
+                            score += line.filter(v => v === player).length;
+                        }
+                    }
+                }
+            }
+            // Check cols
+            for (let c = 0; c < 5; c++) {
+                for (let r = 0; r < 3; r++) {
+                    if (!hWalls[r][c] && !hWalls[r+1][c]) {
+                        const line = [board[r*5+c], board[(r+1)*5+c], board[(r+2)*5+c]];
+                        if (!line.includes(opponent)) {
+                            score += line.filter(v => v === player).length;
+                        }
+                    }
+                }
+            }
+            return score;
+        }
+
+        // --- Event Listeners ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            currentPlayer = 'X';
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        });
+
+        document.getElementById('easyDiff').addEventListener('click', () => startPvC('easy'));
+        document.getElementById('mediumDiff').addEventListener('click', () => startPvC('medium'));
+        document.getElementById('hardDiff').addEventListener('click', () => startPvC('hard'));
+
+        function startPvC(diff) {
+            gameMode = 'PvC';
+            difficulty = diff;
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            currentPlayer = 'X';
+            initializeGame();
+        }
+
+        backToModeButton.addEventListener('click', () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        resetButton.addEventListener('click', () => initializeGame(true));
+        newMazeButton.addEventListener('click', () => initializeGame(false));
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        showRulesBtn.addEventListener('click', () => {
+            rulesModal.style.display = 'flex';
+        });
+        closeRulesBtn.addEventListener('click', () => rulesModal.style.display = 'none');
+
+        modalCloseButton.addEventListener('click', () => messageModal.style.display = 'none');
+        window.onclick = (event) => {
+            if (event.target == rulesModal) rulesModal.style.display = 'none';
+            if (event.target == messageModal) messageModal.style.display = 'none';
+        };
+
+        function showModal(msg) {
+            modalMessageElement.textContent = msg;
+            messageModal.style.display = 'flex';
+        }
+
+    </script>
+</body>
+</html>
