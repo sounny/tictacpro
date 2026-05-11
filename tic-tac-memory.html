@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .cell-container {
+            width: 100px;
+            height: 100px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .cell-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .cell-container.flipped .cell-inner {
+            transform: rotateY(180deg);
+        }
+
+        .cell-front,
+        .cell-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            border: 2px solid #374151;
+            border-radius: 0.75rem;
+        }
+
+        .cell-front {
+            background-color: #1e293b;
+            color: #64748b;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        .cell-back {
+            background-color: #1e293b;
+            transform: rotateY(180deg);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .cell-back.x {
+            color: #22d3ee;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+        }
+
+        .cell-back.o {
+            color: #f472b6;
+            text-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell-container {
+                width: 80px;
+                height: 80px;
+            }
+
+            .cell-front,
+            .cell-back {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .cell-container {
+                width: 70px;
+                height: 70px;
+            }
+
+            .cell-front,
+            .cell-back {
+                font-size: 2rem;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 24px;
+            border-radius: 16px;
+            text-align: left;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            max-width: 90%;
+            width: 450px;
+            border: 1px solid #334155;
+        }
+
+        .winning-cell .cell-back {
+            background-color: #334155;
+            border-color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-900/50 p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700 backdrop-blur-sm">
+        <h1
+            class="text-4xl md:text-5xl font-extrabold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
+            Tic Tac Memory</h1>
+        <p class="text-slate-400 text-center text-sm mb-6 italic">Recall the grid. Claim victory.</p>
+
+        <div class="flex justify-center mb-6">
+            <button id="showRules" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-1.5 rounded-full text-xs font-medium transition-all border border-slate-700">How to Play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-lg mb-4 text-slate-300 font-semibold">Choose Game Mode</h2>
+            <div class="flex justify-center space-x-4">
+                <button id="vsPlayer"
+                    class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-1 active:scale-95 w-full">2
+                    Players</button>
+                <button id="vsComputer"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-1 active:scale-95 w-full">vs
+                    Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-lg mb-4 text-slate-300 font-semibold">Select Difficulty</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-1 active:scale-95">Easy</button>
+                <button id="mediumDiff"
+                    class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-1 active:scale-95">Medium</button>
+                <button id="hardDiff"
+                    class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-1 active:scale-95">Hard</button>
+                <button id="backToMode" class="text-slate-500 hover:text-slate-300 mt-2 transition-colors text-sm font-medium">← Back to Modes</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard"
+                class="grid grid-cols-3 gap-4 mx-auto mb-8"
+                style="width: fit-content;">
+            </div>
+
+            <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-6">
+                <p id="status" class="status text-lg text-center h-7 text-slate-200 font-semibold"></p>
+            </div>
+
+            <div class="flex justify-center space-x-3">
+                <button id="resetButton"
+                    class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95 border border-slate-600">Reset</button>
+                <button id="changeModeButton"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-6 rounded-lg transition-all active:scale-95 border border-slate-700">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-400 border-b border-slate-700 pb-2">Game Rules</h2>
+            <ul class="text-slate-300 space-y-3 text-sm md:text-base list-disc pl-5">
+                <li>All cells start <strong>face-down</strong>.</li>
+                <li><strong>Phase 1:</strong> Flip any cell to reveal its content.</li>
+                <li>If the cell is <strong>empty</strong>, you enter <strong>Phase 2</strong>: Place your piece there. It stays face-up for 2 turns.</li>
+                <li>If it's an <strong>opponent's piece</strong>, it flips back and your turn ends immediately.</li>
+                <li>If it's <strong>your own piece</strong>, it flips back and you can choose a different cell to flip.</li>
+                <li>You must <strong>remember</strong> where pieces are to build 3 in a row!</li>
+            </ul>
+            <div class="mt-8 text-center">
+                <button id="closeRules"
+                    class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-10 rounded-xl shadow-lg transition-all active:scale-95">Start Playing</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content text-center">
+            <p id="modalMessage" class="text-2xl font-black mb-8 text-white"></p>
+            <button id="modalCloseButton"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-12 rounded-xl shadow-lg transition-all active:scale-95">Great!</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const resetButton = document.getElementById('resetButton');
+        const changeModeButton = document.getElementById('changeModeButton');
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+        const vsPlayerButton = document.getElementById('vsPlayer');
+        const vsComputerButton = document.getElementById('vsComputer');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const easyDiffButton = document.getElementById('easyDiff');
+        const mediumDiffButton = document.getElementById('mediumDiff');
+        const hardDiffButton = document.getElementById('hardDiff');
+        const backToModeButton = document.getElementById('backToMode');
+        const showRulesButton = document.getElementById('showRules');
+        const closeRulesButton = document.getElementById('closeRules');
+        const rulesModal = document.getElementById('rulesModal');
+
+        // Modal elements
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        // Game State Variables
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let visibility = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let gameMode = ''; // '2P' or 'PvC'
+        let difficulty = 'hard';
+        let turnPhase = 'flip'; // 'flip' or 'place'
+        let flippedIndex = -1;
+        let aiKnowledge = ['', '', '', '', '', '', '', '', ''];
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        // --- UI Functions ---
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            messageModal.style.display = 'none';
+        }
+
+        modalCloseButton.addEventListener('click', closeModal);
+        showRulesButton.addEventListener('click', () => rulesModal.style.display = 'flex');
+        closeRulesButton.addEventListener('click', () => rulesModal.style.display = 'none');
+
+        // --- Game Logic ---
+        function initializeGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            visibility = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+            aiKnowledge = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            turnPhase = 'flip';
+            flippedIndex = -1;
+            renderBoard();
+            updateStatus();
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const container = document.createElement('div');
+                container.className = 'cell-container';
+                if (visibility[i] > 0 || i === flippedIndex) {
+                    container.classList.add('flipped');
+                }
+
+                const inner = document.createElement('div');
+                inner.className = 'cell-inner';
+
+                const front = document.createElement('div');
+                front.className = 'cell-front';
+                front.textContent = '?';
+
+                const back = document.createElement('div');
+                back.className = 'cell-back';
+                if (board[i]) {
+                    back.classList.add(board[i].toLowerCase());
+                    back.textContent = board[i];
+                } else {
+                    back.textContent = '';
+                }
+
+                inner.appendChild(front);
+                inner.appendChild(back);
+                container.appendChild(inner);
+
+                container.addEventListener('click', () => handleCellClick(i));
+                gameBoardElement.appendChild(container);
+            }
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            const playerLabel = (gameMode === 'PvC' && currentPlayer === 'O') ? "Computer" : `Player ${currentPlayer}`;
+            if (turnPhase === 'flip') {
+                statusElement.textContent = `${playerLabel}'s turn: Flip a cell`;
+            } else {
+                statusElement.textContent = `${playerLabel}: Place your piece`;
+            }
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            if (turnPhase === 'flip') {
+                handleFlip(index);
+            } else if (turnPhase === 'place') {
+                handlePlace(index);
+            }
+        }
+
+        function handleFlip(index) {
+            if (visibility[index] > 0) return;
+            if (flippedIndex !== -1) return; // Already flipping something
+
+            flippedIndex = index;
+            aiKnowledge[index] = board[index] || 'empty';
+            renderBoard();
+
+            setTimeout(() => {
+                if (board[index] === '') {
+                    turnPhase = 'place';
+                    updateStatus();
+                } else if (board[index] === currentPlayer) {
+                    flippedIndex = -1;
+                    renderBoard();
+                    // Choose another
+                } else {
+                    flippedIndex = -1;
+                    renderBoard();
+                    setTimeout(endTurn, 300);
+                }
+            }, 700);
+        }
+
+        function handlePlace(index) {
+            if (index !== flippedIndex) return;
+
+            board[index] = currentPlayer;
+            visibility[index] = 2;
+            aiKnowledge[index] = currentPlayer;
+
+            flippedIndex = -1;
+            renderBoard();
+
+            if (checkWin(currentPlayer)) {
+                endGame(false, currentPlayer);
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true);
+            } else {
+                endTurn();
+            }
+        }
+
+        function endTurn() {
+            for (let i = 0; i < 9; i++) {
+                if (visibility[i] > 0) visibility[i]--;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            turnPhase = 'flip';
+            flippedIndex = -1;
+            renderBoard();
+            updateStatus();
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(computerMove, 600);
+            }
+        }
+
+        function checkWin(player, checkBoard = board) {
+            return winningConditions.some(condition => {
+                return condition.every(index => checkBoard[index] === player);
+            });
+        }
+
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            // Reveal all occupied cells
+            visibility = board.map(cell => cell !== '' ? 1 : 0);
+            renderBoard();
+
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("Memory match! It's a draw.");
+            } else {
+                const winnerLabel = (gameMode === 'PvC' && winner === 'O') ? "Computer" : `Player ${winner}`;
+                statusElement.textContent = `${winnerLabel} Wins!`;
+                showModal(`${winnerLabel} Wins!`);
+
+                // Highlight winning line
+                winningConditions.forEach(condition => {
+                    if (condition.every(index => board[index] === winner)) {
+                        condition.forEach(index => {
+                            gameBoardElement.children[index].classList.add('winning-cell');
+                        });
+                    }
+                });
+            }
+        }
+
+        // --- AI Logic ---
+        function computerMove() {
+            if (!gameActive) return;
+
+            let move = -1;
+
+            if (difficulty === 'easy') {
+                move = getRandomMove();
+            } else if (difficulty === 'medium') {
+                move = getMediumMove();
+            } else {
+                move = getHardMove();
+            }
+
+            if (move !== -1) {
+                // Phase 1: Flip
+                flippedIndex = move;
+                aiKnowledge[move] = board[move] || 'empty';
+                renderBoard();
+
+                setTimeout(() => {
+                    if (board[move] === '') {
+                        // Phase 2: Place
+                        board[move] = 'O';
+                        visibility[move] = 2;
+                        aiKnowledge[move] = 'O';
+                        flippedIndex = -1;
+                        renderBoard();
+
+                        if (checkWin('O')) {
+                            endGame(false, 'O');
+                        } else if (board.every(cell => cell !== '')) {
+                            endGame(true);
+                        } else {
+                            endTurn();
+                        }
+                    } else if (board[move] === 'O') {
+                        // Own piece - AI won't usually do this if it knows, but for easy/medium...
+                        flippedIndex = -1;
+                        renderBoard();
+                        setTimeout(computerMove, 400);
+                    } else {
+                        // Opponent piece
+                        flippedIndex = -1;
+                        renderBoard();
+                        setTimeout(endTurn, 300);
+                    }
+                }, 800);
+            }
+        }
+
+        function getRandomMove() {
+            const available = [];
+            for(let i=0; i<9; i++) if(visibility[i] === 0) available.push(i);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getMediumMove() {
+            // 70% chance to play strategic, 30% random
+            if (Math.random() < 0.3) return getRandomMove();
+            return getHardMove();
+        }
+
+        function getHardMove() {
+            // 1. Check if AI can win with pieces it knows about
+            for (let i = 0; i < 9; i++) {
+                if (aiKnowledge[i] === 'empty' || (board[i] === '' && visibility[i] === 0)) {
+                    const tempBoard = [...board];
+                    tempBoard[i] = 'O';
+                    if (checkWin('O', tempBoard)) return i;
+                }
+            }
+
+            // 2. Block player win
+            for (let i = 0; i < 9; i++) {
+                if (aiKnowledge[i] === 'empty' || (board[i] === '' && visibility[i] === 0)) {
+                    const tempBoard = [...board];
+                    tempBoard[i] = 'X';
+                    if (checkWin('X', tempBoard)) return i;
+                }
+            }
+
+            // 3. Prefer unknown cells if no immediate threat
+            const unknown = [];
+            for (let i = 0; i < 9; i++) {
+                if (aiKnowledge[i] === '' && visibility[i] === 0) unknown.push(i);
+            }
+            if (unknown.length > 0) return unknown[Math.floor(Math.random() * unknown.length)];
+
+            // 4. Prefer empty cells we know about
+            const knownEmpty = [];
+            for (let i = 0; i < 9; i++) {
+                if (aiKnowledge[i] === 'empty' && visibility[i] === 0) knownEmpty.push(i);
+            }
+            if (knownEmpty.length > 0) return knownEmpty[Math.floor(Math.random() * knownEmpty.length)];
+
+            // 5. Fallback
+            return getRandomMove();
+        }
+
+        // --- Event Listeners ---
+        vsPlayerButton.addEventListener('click', () => {
+            gameMode = '2P';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        vsComputerButton.addEventListener('click', () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        });
+
+        backToModeButton.addEventListener('click', () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        easyDiffButton.addEventListener('click', () => startGamePvC('easy'));
+        mediumDiffButton.addEventListener('click', () => startGamePvC('medium'));
+        hardDiffButton.addEventListener('click', () => startGamePvC('hard'));
+
+        function startGamePvC(selectedDifficulty) {
+            gameMode = 'PvC';
+            difficulty = selectedDifficulty;
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        }
+
+        resetButton.addEventListener('click', initializeGame);
+        changeModeButton.addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+            gameActive = false;
+        });
+
+    </script>
+    <div class="mt-8 text-center">
+        <a href="index.html" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-all border border-slate-700 text-sm">Return to Menu</a>
+    </div>
+</body>
+
+</html>
