@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Cloak</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            background-color: #05070a;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            background-color: #334155;
+        }
+
+        .cell.x {
+            color: #00f2ff;
+            text-shadow: 0 0 10px #00f2ff;
+        }
+
+        .cell.o {
+            color: #7000ff;
+            text-shadow: 0 0 10px #7000ff;
+        }
+
+        /* Cloak Shimmer Animation */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .cloaked-shimmer {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+
+        .cloak-outline {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            opacity: 0.6;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+            max-width: 90%;
+            color: white;
+            border: 1px solid #374151;
+        }
+
+        .modal-button {
+            margin-top: 20px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .cloak-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cloak-btn.active {
+            background-color: #f59e0b;
+            box-shadow: 0 0 15px #f59e0b;
+            transform: scale(1.05);
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body
+    class="text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="glass-panel p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+        <h1
+            class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
+            Tic Tac Cloak</h1>
+        <div class="text-center mb-6">
+            <button id="showRules" class="text-xs text-slate-400 hover:text-cyan-400 underline transition-colors">How to Play</button>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-4 text-slate-300">Select Mode</h2>
+            <div class="flex justify-center space-x-4">
+                <button id="vsPlayer"
+                    class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer"
+                    class="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-4 text-slate-300">Select Difficulty</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff" class="bg-emerald-600 hover:bg-emerald-500 py-2 px-4 rounded-lg transition transform hover:scale-105">Easy</button>
+                <button id="mediumDiff" class="bg-amber-600 hover:bg-amber-500 py-2 px-4 rounded-lg transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff" class="bg-rose-600 hover:bg-rose-500 py-2 px-4 rounded-lg transition transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <!-- Counters -->
+            <div class="flex justify-between mb-4 px-2">
+                <div id="p1Cloaks" class="text-cyan-400 font-medium flex items-center">
+                    <span class="mr-2">X Cloaks:</span>
+                    <div class="flex space-x-1">
+                        <div class="w-3 h-3 rounded-full bg-cyan-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-cyan-400"></div>
+                    </div>
+                </div>
+                <div id="p2Cloaks" class="text-purple-400 font-medium flex items-center">
+                    <span class="mr-2">O Cloaks:</span>
+                    <div class="flex space-x-1">
+                        <div class="w-3 h-3 rounded-full bg-purple-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-purple-400"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gameBoard"
+                class="grid grid-cols-3 gap-2 mx-auto bg-slate-700 p-2 rounded-xl shadow-inner"
+                style="width: fit-content;">
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300 font-medium"></p>
+
+            <div class="flex flex-col items-center space-y-4 mt-4">
+                <button id="cloakToggle"
+                    class="cloak-btn bg-slate-700 hover:bg-slate-600 border-2 border-amber-500 text-amber-500 font-bold py-3 px-8 rounded-full shadow-lg w-full max-w-xs uppercase tracking-widest">
+                    Cloak: OFF
+                </button>
+
+                <div class="flex justify-center space-x-3 w-full">
+                    <button id="resetButton"
+                        class="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 px-6 rounded-lg transition">Reset</button>
+                    <button id="changeModeButton"
+                        class="bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 px-6 rounded-lg transition">Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-400">How to Play Tic Tac Cloak</h2>
+            <ul class="text-left space-y-3 text-slate-300 text-sm">
+                <li><span class="text-cyan-400 font-bold">●</span> Standard Tic Tac Toe rules: 3 in a row wins.</li>
+                <li><span class="text-cyan-400 font-bold">●</span> Each player has <span class="text-amber-500 font-bold">2 Cloak Tokens</span>.</li>
+                <li><span class="text-cyan-400 font-bold">●</span> Use a cloak to make your move <span class="text-white font-bold italic">invisible</span> to your opponent.</li>
+                <li><span class="text-cyan-400 font-bold">●</span> You can see your own cloaked pieces (they shimmer subtly).</li>
+                <li><span class="text-cyan-400 font-bold">●</span> If an opponent tries to play on a cell containing a hidden piece, the piece is <span class="text-rose-500 font-bold">revealed</span> and their turn is <span class="text-rose-500 font-bold">wasted</span>!</li>
+                <li><span class="text-cyan-400 font-bold">●</span> Use deduction to figure out where your opponent might be hiding!</li>
+            </ul>
+            <button id="closeRules" class="modal-button bg-cyan-600 hover:bg-cyan-500 text-white">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-xl mb-4"></p>
+            <button id="modalCloseButton" class="modal-button bg-purple-600 hover:bg-purple-500 text-white">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const cloakToggle = document.getElementById('cloakToggle');
+        const p1CloakCount = document.getElementById('p1Cloaks');
+        const p2CloakCount = document.getElementById('p2Cloaks');
+
+        // Navigation
+        const modeSelectionDiv = document.getElementById('modeSelection');
+        const difficultySelectionDiv = document.getElementById('difficultySelection');
+        const gameAreaDiv = document.getElementById('gameArea');
+
+        // Modals
+        const rulesModal = document.getElementById('rulesModal');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageElement = document.getElementById('modalMessage');
+
+        // Game State
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let cloaked = [false, false, false, false, false, false, false, false, false];
+        let cloaksLeft = { 'X': 2, 'O': 2 };
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let isCloakActive = false;
+        let gameMode = '';
+        let difficulty = 'hard';
+        let aiThinking = false;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        // --- UI Functions ---
+        function showModal(message) {
+            modalMessageElement.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            messageModal.style.display = 'none';
+        }
+
+        // --- Game Logic ---
+        function initializeGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            cloaked = [false, false, false, false, false, false, false, false, false];
+            cloaksLeft = { 'X': 2, 'O': 2 };
+            gameActive = true;
+            isCloakActive = false;
+            aiThinking = false;
+            updateCloakButton();
+            updateCloakCounters();
+            renderBoard();
+            updateStatus();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                handleAiTurn();
+            }
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+            board.forEach((mark, i) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell', 'rounded-lg');
+                cell.dataset.index = i;
+
+                // Visibility logic
+                const isMyPiece = mark === currentPlayer;
+                const isVisible = mark !== '' && (!cloaked[i] || isMyPiece || !gameActive);
+
+                if (isVisible) {
+                    cell.textContent = mark;
+                    cell.classList.add(mark.toLowerCase());
+                    if (cloaked[i]) {
+                        cell.classList.add('cloak-outline', 'cloaked-shimmer');
+                    }
+                } else if (cloaked[i] && isMyPiece) {
+                    // This case is covered by isVisible, but for clarity
+                }
+
+                cell.addEventListener('click', () => handleCellClick(i));
+                gameBoardElement.appendChild(cell);
+            });
+        }
+
+        function handleCellClick(i) {
+            if (!gameActive || aiThinking) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            makeMove(i);
+        }
+
+        function makeMove(i) {
+            if (board[i] !== '') {
+                // If it's cloaked and not by current player
+                if (cloaked[i] && board[i] !== currentPlayer) {
+                    revealCloak(i);
+                    return;
+                }
+                return; // Normal occupied cell
+            }
+
+            // Empty cell move
+            board[i] = currentPlayer;
+            if (isCloakActive && cloaksLeft[currentPlayer] > 0) {
+                cloaked[i] = true;
+                cloaksLeft[currentPlayer]--;
+                isCloakActive = false;
+                updateCloakButton();
+                updateCloakCounters();
+            }
+
+            if (checkWin(currentPlayer)) {
+                endGame(false, currentPlayer);
+            } else if (board.every(cell => cell !== '')) {
+                endGame(true);
+            } else {
+                switchPlayer();
+            }
+        }
+
+        function revealCloak(i) {
+            cloaked[i] = false;
+            renderBoard();
+            statusElement.textContent = "CLOAK REVEALED! Turn wasted.";
+            statusElement.classList.add('text-rose-500');
+
+            aiThinking = true; // Temporary lock
+            setTimeout(() => {
+                statusElement.classList.remove('text-rose-500');
+                aiThinking = false;
+                switchPlayer();
+            }, 1500);
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            isCloakActive = false;
+            updateCloakButton();
+            updateStatus();
+            renderBoard();
+
+            if (gameMode === 'PvC' && currentPlayer === 'O' && gameActive) {
+                handleAiTurn();
+            }
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            const name = (gameMode === 'PvC' && currentPlayer === 'O') ? "Computer" : `Player ${currentPlayer}`;
+            statusElement.textContent = `${name}'s Turn`;
+        }
+
+        function updateCloakButton() {
+            cloakToggle.textContent = `Cloak: ${isCloakActive ? 'ON' : 'OFF'} (${cloaksLeft[currentPlayer]})`;
+            if (isCloakActive) {
+                cloakToggle.classList.add('active');
+            } else {
+                cloakToggle.classList.remove('active');
+            }
+
+            if (cloaksLeft[currentPlayer] <= 0) {
+                cloakToggle.classList.add('opacity-50', 'cursor-not-allowed');
+                cloakToggle.disabled = true;
+            } else {
+                cloakToggle.classList.remove('opacity-50', 'cursor-not-allowed');
+                cloakToggle.disabled = false;
+            }
+        }
+
+        function updateCloakCounters() {
+            const updateDots = (container, count) => {
+                const dots = container.querySelectorAll('div');
+                dots.forEach((dot, i) => {
+                    dot.style.opacity = i < count ? '1' : '0.2';
+                });
+            };
+            updateDots(p1CloakCount, cloaksLeft['X']);
+            updateDots(p2CloakCount, cloaksLeft['O']);
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        function endGame(isTie, winner = null) {
+            gameActive = false;
+            if (isTie) {
+                statusElement.textContent = "It's a Tie!";
+                showModal("It's a Tie!");
+            } else {
+                const winnerName = (gameMode === 'PvC' && winner === 'O') ? "Computer" : `Player ${winner}`;
+                statusElement.textContent = `${winnerName} Wins!`;
+                showModal(`${winnerName} wins the game!`);
+            }
+            renderBoard(); // Final render reveals all
+        }
+
+        // --- AI Logic ---
+        function handleAiTurn() {
+            aiThinking = true;
+            statusElement.textContent = "Computer is thinking...";
+
+            setTimeout(() => {
+                const move = getAiMove();
+
+                // AI deciding whether to cloak
+                if (cloaksLeft['O'] > 0 && Math.random() > 0.5) {
+                    isCloakActive = true;
+                }
+
+                aiThinking = false;
+                makeMove(move);
+            }, 1000);
+        }
+
+        function getAiMove() {
+            // AI "Vision" - it doesn't know about cloaked pieces
+            const knownBoard = board.map((m, i) => (cloaked[i] && board[i] === 'X') ? '' : m);
+
+            if (difficulty === 'easy') {
+                const empties = knownBoard.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+                return empties[Math.floor(Math.random() * empties.length)];
+            }
+
+            if (difficulty === 'medium') {
+                // Strategic moves
+                // 1. Can AI win?
+                for (let i = 0; i < 9; i++) {
+                    if (knownBoard[i] === '') {
+                        knownBoard[i] = 'O';
+                        if (checkWinOnBoard('O', knownBoard)) return i;
+                        knownBoard[i] = '';
+                    }
+                }
+                // 2. Block player?
+                for (let i = 0; i < 9; i++) {
+                    if (knownBoard[i] === '') {
+                        knownBoard[i] = 'X';
+                        if (checkWinOnBoard('X', knownBoard)) return i;
+                        knownBoard[i] = '';
+                    }
+                }
+                // 3. Center
+                if (knownBoard[4] === '') return 4;
+                // 4. Corners
+                const corners = [0, 2, 6, 8].filter(i => knownBoard[i] === '');
+                if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+                // 5. Random
+                const empties = knownBoard.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+                return empties[Math.floor(Math.random() * empties.length)];
+            }
+
+            // Hard: Minimax on known board
+            let bestScore = -Infinity;
+            let move = -1;
+            for (let i = 0; i < 9; i++) {
+                if (knownBoard[i] === '') {
+                    knownBoard[i] = 'O';
+                    let score = minimax(knownBoard, 0, false);
+                    knownBoard[i] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
+            }
+            return move;
+        }
+
+        function checkWinOnBoard(player, tempBoard) {
+            return winningConditions.some(condition => {
+                return condition.every(index => tempBoard[index] === player);
+            });
+        }
+
+        function minimax(tempBoard, depth, isMaximizing) {
+            const result = checkWinnerMinimax(tempBoard);
+            if (result !== null) {
+                if (result === 'O') return 10 - depth;
+                if (result === 'X') return depth - 10;
+                return 0;
+            }
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === '') {
+                        tempBoard[i] = 'O';
+                        let score = minimax(tempBoard, depth + 1, false);
+                        tempBoard[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === '') {
+                        tempBoard[i] = 'X';
+                        let score = minimax(tempBoard, depth + 1, true);
+                        tempBoard[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function checkWinnerMinimax(tempBoard) {
+            let winner = null;
+            winningConditions.forEach(condition => {
+                if (tempBoard[condition[0]] !== '' &&
+                    tempBoard[condition[0]] === tempBoard[condition[1]] &&
+                    tempBoard[condition[0]] === tempBoard[condition[2]]) {
+                    winner = tempBoard[condition[0]];
+                }
+            });
+
+            if (winner === null && tempBoard.every(cell => cell !== '')) {
+                return 'tie';
+            }
+            return winner;
+        }
+
+        // --- Event Listeners ---
+        cloakToggle.addEventListener('click', () => {
+            if (cloaksLeft[currentPlayer] > 0) {
+                isCloakActive = !isCloakActive;
+                updateCloakButton();
+            }
+        });
+
+        document.getElementById('vsPlayer').addEventListener('click', () => {
+            gameMode = '2P';
+            currentPlayer = 'X';
+            modeSelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        });
+
+        document.getElementById('vsComputer').addEventListener('click', () => {
+            modeSelectionDiv.classList.add('hidden');
+            difficultySelectionDiv.classList.remove('hidden');
+        });
+
+        document.getElementById('backToMode').addEventListener('click', () => {
+            difficultySelectionDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        document.getElementById('easyDiff').addEventListener('click', () => startPvC('easy'));
+        document.getElementById('mediumDiff').addEventListener('click', () => startPvC('medium'));
+        document.getElementById('hardDiff').addEventListener('click', () => startPvC('hard'));
+
+        function startPvC(d) {
+            difficulty = d;
+            gameMode = 'PvC';
+            currentPlayer = Math.random() < 0.5 ? 'X' : 'O';
+            difficultySelectionDiv.classList.add('hidden');
+            gameAreaDiv.classList.remove('hidden');
+            initializeGame();
+        }
+
+        document.getElementById('resetButton').addEventListener('click', initializeGame);
+        document.getElementById('changeModeButton').addEventListener('click', () => {
+            gameAreaDiv.classList.add('hidden');
+            modeSelectionDiv.classList.remove('hidden');
+        });
+
+        document.getElementById('showRules').addEventListener('click', () => rulesModal.style.display = 'flex');
+        document.getElementById('closeRules').addEventListener('click', () => rulesModal.style.display = 'none');
+        document.getElementById('modalCloseButton').addEventListener('click', closeModal);
+
+        window.onclick = (event) => {
+            if (event.target == rulesModal) rulesModal.style.display = 'none';
+            if (event.target == messageModal) closeModal();
+        };
+
+    </script>
+</body>
+
+</html>
