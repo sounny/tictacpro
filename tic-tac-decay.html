@@ -373,6 +373,12 @@
          * @param {boolean} isDraw - True if the game is a draw.
          */
         function endGame(isDraw) {
+            if (typeof TicTacStats !== 'undefined' && (typeof gameMode !== 'undefined' ? gameMode === 'PvC' : true)) {
+                if (isDraw) TicTacStats.recordResult(document.title, 'draw');
+                else if (currentPlayer === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (currentPlayer === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
             gameActive = false;
             let message = '';
             let statusText = '';
@@ -511,5 +517,6 @@
     <div class="mt-6 text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+    <script src="js/stats.js"></script>
 </body>
 </html>

@@ -125,9 +125,11 @@
             cell.classList.add(player === 'X' ? 'x' : 'o');
             if (checkWin(player)) {
                 statusElement.textContent = `Player ${player} wins!`;
+                if (typeof TicTacStats !== 'undefined') TicTacStats.recordResult(document.title, player === "X" ? "win" : "loss");
                 gameActive = false;
             } else if (board.every(c => c !== '')) {
                 statusElement.textContent = "It's a tie!";
+                if (typeof TicTacStats !== 'undefined') TicTacStats.recordResult(document.title, "draw");
                 gameActive = false;
             } else {
                 switchPlayer();
@@ -151,5 +153,6 @@
     <div class="mt-auto text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+    <script src="js/stats.js"></script>
 </body>
 </html>

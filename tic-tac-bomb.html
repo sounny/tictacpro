@@ -447,6 +447,12 @@
 
         // Function to end the game
         function endGame(isTie, winner = null) {
+            if (typeof TicTacStats !== 'undefined' && gameMode === 'PvC') {
+                if (isTie) TicTacStats.recordResult(document.title, 'draw');
+                else if (winner === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (winner === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
             gameActive = false;
             bombModeActive = false; // Ensure bomb mode is off
             if (bombButton) { // Hide and disable bomb button on game end
@@ -533,5 +539,6 @@
     <div class="mt-6 text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+    <script src="js/stats.js"></script>
 </body>
 </html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Pro - Statistics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .stats-container {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #33415550;
+        }
+        .chart-container {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .chart-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .chart-label {
+            width: 200px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chart-bar-bg {
+            flex-grow: 1;
+            height: 24px;
+            background-color: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+        }
+        .bar-win { background-color: #10b981; }
+        .bar-loss { background-color: #f43f5e; }
+        .bar-draw { background-color: #94a3b8; }
+        .chart-value {
+            width: 40px;
+            text-align: right;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+        .btn-clear {
+            background-color: #475569;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        .btn-clear:hover {
+            background-color: #f43f5e;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Statistics Dashboard</h1>
+        <p>Track your progress across the collection</p>
+    </header>
+
+    <main>
+        <div class="flex justify-between items-center mb-6">
+            <a href="index.html" class="play-button" style="padding: 0.5rem 1rem;">← Back to Menu</a>
+            <button id="clearStats" class="btn-clear">Clear All Statistics</button>
+        </div>
+
+        <div id="statsContent">
+            <!-- Content will be injected here -->
+        </div>
+    </main>
+
+    <footer>
+        <p>Tic Tac Pro - Your Ultimate Collection</p>
+    </footer>
+
+    <script>
+        const STORAGE_KEY = 'tictacpro_stats';
+
+        function getStats() {
+            const stats = localStorage.getItem(STORAGE_KEY);
+            return stats ? JSON.parse(stats) : {};
+        }
+
+        function renderDashboard() {
+            const stats = getStats();
+            const container = document.getElementById('statsContent');
+            const variants = Object.keys(stats);
+
+            if (variants.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 1rem; opacity: 0.5;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <p class="text-xl">No games played yet!</p>
+                        <p>Go play some matches vs Computer to see your stats here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="stats-container shadow-xl">
+                    <h2 class="text-2xl font-bold mb-4" style="color: #e2e8f0;">Summary Table</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Variant</th>
+                                <th>Wins</th>
+                                <th>Losses</th>
+                                <th>Draws</th>
+                                <th>Win %</th>
+                                <th>Max Streak</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            variants.sort((a, b) => (stats[b].wins - stats[a].wins)).forEach(v => {
+                const s = stats[v];
+                const total = s.wins + s.losses + s.draws;
+                const winPct = total > 0 ? Math.round((s.wins / total) * 100) : 0;
+                html += `
+                    <tr>
+                        <td class="font-semibold text-slate-200">${v}</td>
+                        <td class="text-emerald-500">${s.wins}</td>
+                        <td class="text-rose-500">${s.losses}</td>
+                        <td class="text-slate-400">${s.draws}</td>
+                        <td class="text-sky-400">${winPct}%</td>
+                        <td class="text-amber-400">${s.maxStreak}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-container shadow-xl">
+                    <h2 class="text-2xl font-bold mb-6" style="color: #e2e8f0;">Win Distribution</h2>
+                    <div class="chart-container">
+            `;
+
+            variants.forEach(v => {
+                const s = stats[v];
+                const total = s.wins + s.losses + s.draws;
+                const winW = (s.wins / total) * 100;
+                const lossW = (s.losses / total) * 100;
+                const drawW = (s.draws / total) * 100;
+
+                html += `
+                    <div class="chart-row">
+                        <div class="chart-label" title="${v}">${v}</div>
+                        <div class="chart-bar-bg">
+                            <div class="bar-win" style="width: ${winW}%" title="Wins: ${s.wins}"></div>
+                            <div class="bar-loss" style="width: ${lossW}%" title="Losses: ${s.losses}"></div>
+                            <div class="bar-draw" style="width: ${drawW}%" title="Draws: ${s.draws}"></div>
+                        </div>
+                        <div class="chart-value">${total}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                    <div class="flex gap-4 mt-6 text-xs justify-center">
+                        <div class="flex items-center gap-1"><div class="w-3 h-3 bar-win rounded"></div> Wins</div>
+                        <div class="flex items-center gap-1"><div class="w-3 h-3 bar-loss rounded"></div> Losses</div>
+                        <div class="flex items-center gap-1"><div class="w-3 h-3 bar-draw rounded"></div> Draws</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        document.getElementById('clearStats').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all statistics? This cannot be undone.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderDashboard();
+            }
+        });
+
+        renderDashboard();
+    </script>
+</body>
+</html>

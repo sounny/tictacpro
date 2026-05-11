@@ -140,7 +140,13 @@
 
         function computerMove(){ if(!gameActive) return; const empties=board.map((v,i)=>v===''?i:null).filter(v=>v!==null); const choice=empties[Math.floor(Math.random()*empties.length)]; if(choice!==undefined) makeMove(choice,'O'); }
 
-        function endGame(tie,winner=null){
+        function endGame(tie,winner=null) {
+            if (typeof TicTacStats !== 'undefined' && (typeof gameMode !== 'undefined' ? gameMode === 'PvC' : true)) {
+                if (tie) TicTacStats.recordResult(document.title, 'draw');
+                else if (winner === 'X') TicTacStats.recordResult(document.title, 'win');
+                else if (winner === 'O') TicTacStats.recordResult(document.title, 'loss');
+            }
+
             gameActive=false;
             if(tie){ statusElement.textContent="It's a tie!"; showModal("It's a tie!"); }
             else if(winner){ const name=gameMode==='PvC'&&winner==='O'?"Computer (O)":"Player "+winner; statusElement.textContent=`${name} wins!`; showModal(`${name} wins!`); }
@@ -162,5 +168,6 @@
     <div class="mt-6 text-center">
         <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
     </div>
+    <script src="js/stats.js"></script>
 </body>
 </html>

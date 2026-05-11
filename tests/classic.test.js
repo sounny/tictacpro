@@ -49,7 +49,12 @@ describe('Tic Tac Classic Game Logic', function() {
         const vsComputerButton = document.getElementById('vsComputer');
         if (!vsComputerButton) throw new Error('vsComputer button not found');
         vsComputerButton.click();
-        await wait(100); // Give it a moment to initialize
+        await wait(100);
+        const hardDiffButton = document.getElementById('hardDiff');
+        if (hardDiffButton) {
+            hardDiffButton.click();
+            await wait(100);
+        }
     }
 
     it('should initialize correctly when mode is selected', async function() {
