@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Archer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 4px;
+            width: fit-content;
+            margin: 0 auto;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .arrow-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            font-size: 1.2rem;
+        }
+        .arrow-cell:hover:not(.disabled) {
+            color: #22d3ee;
+            transform: scale(1.1);
+        }
+        .arrow-cell.disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+        .cell.x { color: #22d3ee; }
+        .cell.o { color: #f472b6; }
+
+        .arrow-flight {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 100;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @media (max-width: 500px) {
+            .arrow-flight {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .cell, .arrow-cell, .corner-cell {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            .board-container { gap: 2px; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-2xl border border-slate-700">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">Tic Tac Archer</h1>
+        <p class="text-slate-400 text-center mb-6">Aim, Shoot, Connect 4!</p>
+
+        <div id="modeSelection" class="space-y-4">
+            <div class="flex flex-wrap justify-center gap-4">
+                <button id="vsPlayer" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 px-6 rounded-lg transition transform hover:scale-105 shadow-lg">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition transform hover:scale-105 shadow-lg">vs Computer</button>
+            </div>
+            <div class="text-center">
+                <button id="showRules" class="text-sky-400 hover:underline">How to play?</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="hidden text-center space-y-4">
+            <h2 class="text-xl text-slate-200">Select Difficulty</h2>
+            <div class="flex flex-wrap justify-center gap-3">
+                <button data-diff="easy" class="diff-btn bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-4 rounded">Easy</button>
+                <button data-diff="medium" class="diff-btn bg-amber-600 hover:bg-amber-500 text-white py-2 px-4 rounded">Medium</button>
+                <button data-diff="hard" class="diff-btn bg-rose-600 hover:bg-rose-500 text-white py-2 px-4 rounded">Hard</button>
+            </div>
+            <button id="backToMode" class="text-slate-500 hover:text-slate-300">← Back</button>
+        </div>
+
+        <div id="gameArea" class="hidden mt-4">
+            <div id="gameBoard" class="board-container mb-6">
+                <!-- Board and arrows will be generated here -->
+            </div>
+
+            <div class="flex flex-col items-center gap-4">
+                <div id="status" class="text-2xl font-semibold h-8"></div>
+                <div class="flex gap-4">
+                    <button id="resetButton" class="bg-slate-700 hover:bg-slate-600 text-white py-2 px-6 rounded-lg transition">Reset</button>
+                    <button id="changeModeButton" class="bg-slate-700 hover:bg-slate-600 text-white py-2 px-6 rounded-lg transition">Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-md border border-slate-700 m-4">
+            <h2 class="text-3xl font-bold mb-4 text-sky-400">Rules</h2>
+            <ul class="space-y-3 list-disc list-inside text-slate-300">
+                <li>Grid is 5x5.</li>
+                <li>Instead of clicking cells, you click <b>arrows</b> around the perimeter.</li>
+                <li>An arrow "shoots" your piece into that row or column.</li>
+                <li>Your piece lands on the <b>first empty cell</b> it hits.</li>
+                <li>If a row or column is full, that arrow is disabled.</li>
+                <li>First to get <b>4 in a row</b> (horizontally, vertically, or diagonally) wins!</li>
+            </ul>
+            <button id="closeRules" class="mt-8 w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="modal">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm text-center border border-slate-700 m-4">
+            <h2 id="resultTitle" class="text-4xl font-bold mb-4">Winner!</h2>
+            <p id="resultMessage" class="text-slate-400 mb-8"></p>
+            <button id="closeResult" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition">Play Again</button>
+        </div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="index.html" class="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition border border-slate-700 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            Return to Menu
+        </a>
+    </div>
+
+    <script>
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const modeSelection = document.getElementById('modeSelection');
+        const difficultySelection = document.getElementById('difficultySelection');
+        const gameArea = document.getElementById('gameArea');
+        const rulesModal = document.getElementById('rulesModal');
+        const resultModal = document.getElementById('resultModal');
+
+        let board = Array(25).fill(''); // 5x5
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let gameMode = '2P'; // '2P' or 'PvC'
+        let aiDifficulty = 'medium';
+
+        function init() {
+            document.getElementById('vsPlayer').onclick = () => startMode('2P');
+            document.getElementById('vsComputer').onclick = () => {
+                modeSelection.classList.add('hidden');
+                difficultySelection.classList.remove('hidden');
+            };
+            document.getElementById('backToMode').onclick = () => {
+                difficultySelection.classList.add('hidden');
+                modeSelection.classList.remove('hidden');
+            };
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.onclick = () => {
+                    aiDifficulty = btn.dataset.diff;
+                    startMode('PvC');
+                };
+            });
+            document.getElementById('showRules').onclick = () => rulesModal.style.display = 'flex';
+            document.getElementById('closeRules').onclick = () => rulesModal.style.display = 'none';
+            document.getElementById('resetButton').onclick = resetGame;
+            document.getElementById('changeModeButton').onclick = () => location.reload();
+            document.getElementById('closeResult').onclick = () => {
+                resultModal.style.display = 'none';
+                resetGame();
+            };
+        }
+
+        function startMode(mode) {
+            gameMode = mode;
+            modeSelection.classList.add('hidden');
+            difficultySelection.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            resetGame();
+        }
+
+        function resetGame() {
+            board = Array(25).fill('');
+            currentPlayer = 'X';
+            gameActive = true;
+            renderBoard();
+            updateStatus();
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') {
+                statusElement.textContent = "Computer is thinking...";
+            } else {
+                statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+                statusElement.className = `text-2xl font-semibold h-8 ${currentPlayer === 'X' ? 'text-sky-400' : 'text-pink-400'}`;
+            }
+        }
+
+        function renderBoard() {
+            gameBoardElement.innerHTML = '';
+
+            // Generate 7x7 grid
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const div = document.createElement('div');
+
+                    if (r > 0 && r < 6 && c > 0 && c < 6) {
+                        // 5x5 Board
+                        const index = (r - 1) * 5 + (c - 1);
+                        div.className = 'cell rounded-md';
+                        if (board[index]) {
+                            div.textContent = board[index];
+                            div.classList.add(board[index].toLowerCase());
+                        }
+                    } else if ((r === 0 || r === 6) && (c > 0 && c < 6)) {
+                        // Top/Bottom arrows
+                        setupArrow(div, r === 0 ? 'down' : 'up', c - 1);
+                    } else if ((c === 0 || c === 6) && (r > 0 && r < 6)) {
+                        // Left/Right arrows
+                        setupArrow(div, c === 0 ? 'right' : 'left', r - 1);
+                    } else {
+                        // Corners
+                        div.className = 'corner-cell w-[50px] h-[50px]';
+                    }
+
+                    gameBoardElement.appendChild(div);
+                }
+            }
+        }
+
+        function setupArrow(div, dir, lineIdx) {
+            div.className = 'arrow-cell';
+            const icon = {
+                down: '↓', up: '↑', right: '→', left: '←'
+            }[dir];
+            div.textContent = icon;
+
+            // Check if full
+            const isFull = checkLineFull(dir, lineIdx);
+            if (isFull) {
+                div.classList.add('disabled');
+            } else {
+                div.onclick = () => handleShoot(dir, lineIdx);
+            }
+        }
+
+        function checkLineFull(dir, lineIdx) {
+            for (let i = 0; i < 5; i++) {
+                let cellIdx;
+                if (dir === 'down' || dir === 'up') cellIdx = i * 5 + lineIdx;
+                else cellIdx = lineIdx * 5 + i;
+                if (board[cellIdx] === '') return false;
+            }
+            return true;
+        }
+
+        function handleShoot(dir, lineIdx) {
+            if (!gameActive) return;
+            if (gameMode === 'PvC' && currentPlayer === 'O') return;
+
+            const targetIdx = findLandingCell(dir, lineIdx);
+            if (targetIdx === -1) return;
+
+            executeMove(targetIdx, dir, lineIdx);
+        }
+
+        function findLandingCell(dir, lineIdx) {
+            const indices = [];
+            if (dir === 'down') for (let i = 0; i < 5; i++) indices.push(i * 5 + lineIdx);
+            else if (dir === 'up') for (let i = 4; i >= 0; i--) indices.push(i * 5 + lineIdx);
+            else if (dir === 'right') for (let i = 0; i < 5; i++) indices.push(lineIdx * 5 + i);
+            else if (dir === 'left') for (let i = 4; i >= 0; i--) indices.push(lineIdx * 5 + i);
+
+            for (let idx of indices) {
+                if (board[idx] === '') return idx;
+            }
+            return -1;
+        }
+
+        function executeMove(targetIdx, dir, lineIdx) {
+            gameActive = false; // Disable during animation
+
+            // 1. Identify start element (the arrow cell)
+            let startRow, startCol;
+            if (dir === 'down') { startRow = 0; startCol = lineIdx + 1; }
+            else if (dir === 'up') { startRow = 6; startCol = lineIdx + 1; }
+            else if (dir === 'right') { startRow = lineIdx + 1; startCol = 0; }
+            else if (dir === 'left') { startRow = lineIdx + 1; startCol = 6; }
+
+            const startCell = gameBoardElement.children[startRow * 7 + startCol];
+            const targetRow = Math.floor(targetIdx / 5) + 1;
+            const targetCol = (targetIdx % 5) + 1;
+            const targetCell = gameBoardElement.children[targetRow * 7 + targetCol];
+
+            // 2. Create flying piece
+            const flyer = document.createElement('div');
+            flyer.className = 'arrow-flight ' + (currentPlayer === 'X' ? 'text-sky-400' : 'text-pink-400');
+            flyer.textContent = currentPlayer;
+
+            const startRect = startCell.getBoundingClientRect();
+            const targetRect = targetCell.getBoundingClientRect();
+
+            flyer.style.left = startRect.left + 'px';
+            flyer.style.top = startRect.top + 'px';
+            document.body.appendChild(flyer);
+
+            // 3. Trigger animation
+            requestAnimationFrame(() => {
+                flyer.style.transform = `translate(${targetRect.left - startRect.left}px, ${targetRect.top - startRect.top}px)`;
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                board[targetIdx] = currentPlayer;
+                gameActive = true;
+                renderBoard();
+
+                if (checkWin()) {
+                    gameActive = false;
+                    endGame(currentPlayer);
+                } else if (board.every(c => c !== '')) {
+                    gameActive = false;
+                    endGame('Tie');
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    updateStatus();
+                    if (gameMode === 'PvC' && currentPlayer === 'O') {
+                        setTimeout(computerMove, 600);
+                    }
+                }
+            }, 500);
+        }
+
+        function checkWin() {
+            const winLines = [
+                // Rows (4 in 5x5)
+                ...[0,1,2,3,4].flatMap(r => [[0,1,2,3], [1,2,3,4]].map(l => l.map(c => r*5+c))),
+                // Cols
+                ...[0,1,2,3,4].flatMap(c => [[0,1,2,3], [1,2,3,4]].map(l => l.map(r => r*5+c))),
+                // Diagonals
+                // Top-left to bottom-right
+                [0, 6, 12, 18], [6, 12, 18, 24], [1, 7, 13, 19], [5, 11, 17, 23],
+                // Top-right to bottom-left
+                [3, 7, 11, 15], [4, 8, 12, 16], [8, 12, 16, 20], [9, 13, 17, 21]
+            ];
+
+            return winLines.some(line => {
+                const first = board[line[0]];
+                return first && line.every(idx => board[idx] === first);
+            });
+        }
+
+        function endGame(result) {
+            gameActive = false;
+            const title = document.getElementById('resultTitle');
+            const msg = document.getElementById('resultMessage');
+
+            if (result === 'Tie') {
+                title.textContent = "Draw!";
+                title.className = "text-4xl font-bold mb-4 text-slate-400";
+                msg.textContent = "Great minds think alike!";
+            } else {
+                title.textContent = result === 'X' ? "X Wins!" : "O Wins!";
+                title.className = `text-4xl font-bold mb-4 ${result === 'X' ? 'text-sky-400' : 'text-pink-400'}`;
+                msg.textContent = gameMode === 'PvC' && result === 'O' ? "Better luck next time!" : "Magnificent shooting!";
+            }
+
+            resultModal.style.display = 'flex';
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            const validMoves = [];
+            ['up', 'down', 'left', 'right'].forEach(dir => {
+                for (let i = 0; i < 5; i++) {
+                    const landing = findLandingCell(dir, i);
+                    if (landing !== -1) validMoves.push({dir, lineIdx: i, targetIdx: landing});
+                }
+            });
+
+            if (validMoves.length === 0) return;
+
+            let chosenMove;
+
+            if (aiDifficulty === 'easy') {
+                chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            } else {
+                // Medium & Hard
+                let bestScore = -Infinity;
+                const candidates = [];
+
+                validMoves.forEach(move => {
+                    let score = 0;
+
+                    // 1. Can I win?
+                    board[move.targetIdx] = 'O';
+                    if (checkWin()) score += 1000;
+
+                    // 2. Can I block player?
+                    board[move.targetIdx] = 'X';
+                    if (checkWin()) score += 500;
+
+                    // 3. Heuristic: Center is better
+                    const row = Math.floor(move.targetIdx / 5);
+                    const col = move.targetIdx % 5;
+                    const distFromCenter = Math.abs(row - 2) + Math.abs(col - 2);
+                    score += (4 - distFromCenter) * 2;
+
+                    // 4. Strategic: Hard mode looks deeper (simplified minimax-like)
+                    if (aiDifficulty === 'hard') {
+                        // Penalize if it allows player to win next turn
+                        board[move.targetIdx] = 'O';
+                        let playerCanWin = false;
+                        ['up', 'down', 'left', 'right'].forEach(d => {
+                            for(let i=0; i<5; i++){
+                                if(findLandingCell(d, i) !== -1) {
+                                    board[findLandingCell(d, i)] = 'X';
+                                    if(checkWin()) playerCanWin = true;
+                                    board[findLandingCell(d, i)] = '';
+                                }
+                            }
+                        });
+                        if (playerCanWin) score -= 800;
+                    }
+
+                    board[move.targetIdx] = ''; // Reset
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        candidates.length = 0;
+                        candidates.push(move);
+                    } else if (score === bestScore) {
+                        candidates.push(move);
+                    }
+                });
+
+                chosenMove = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            executeMove(chosenMove.targetIdx, chosenMove.dir, chosenMove.lineIdx);
+        }
+
+        init();
+    </script>
+</body>
+</html>
