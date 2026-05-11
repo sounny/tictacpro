@@ -1,145 +1,239 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-/* General Body Styles */
-body {
-    font-family: 'Inter', sans-serif;
+:root {
+    /* Color Palette */
+    --bg-color: #05070a;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --primary-accent: #00f2ff; /* Neon Cyan */
+    --secondary-accent: #7000ff; /* Deep Purple */
+    --tertiary-accent: #ff0055; /* Vibrant Rose */
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --hero-gradient: linear-gradient(135deg, #00f2ff 0%, #7000ff 100%);
+
+    /* Spacing */
+    --container-max-width: 1200px;
+    --section-padding: 4rem 2rem;
+
+    /* Transitions */
+    --transition-smooth: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+* {
     margin: 0;
     padding: 0;
-    background-color: #0f172a; /* slate-900 */
-    color: #cbd5e1; /* slate-300 */
-    line-height: 1.7;
+    box-sizing: border-box;
 }
 
-/* Header Styles */
-header {
-    background: linear-gradient(90deg, #be185d, #f97316); /* pink-600 to orange-500 */
-    color: #ffffff;
-    padding: 2.5rem 1rem;
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Hero Section */
+.hero {
+    padding: 6rem 2rem;
     text-align: center;
-    border-bottom: none; /* Remove border for a cleaner look */
+    background: radial-gradient(circle at center, rgba(112, 0, 255, 0.15) 0%, transparent 70%);
+    position: relative;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 2.8rem; /* Slightly larger */
-    font-weight: 700; /* Bolder */
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 2px;
+    background: var(--hero-gradient);
+    border-radius: 2px;
 }
 
-header p {
-    margin: 0.5rem 0 0;
-    font-size: 1.3rem; /* Slightly larger */
-    color: #f1f5f9; /* slate-100 */
+.hero h1 {
+    font-size: clamp(3rem, 10vw, 5rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: -0.05em;
+    background: var(--hero-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(0, 242, 255, 0.3));
+}
+
+.hero p {
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
     font-weight: 300;
 }
 
-/* Main Content Styles */
+/* Main Container */
 main {
-    padding: 1.5rem; /* Adjusted padding */
-    max-width: 1200px;
-    margin: 2.5rem auto; /* Adjusted margin */
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--section-padding);
 }
 
 .game-cards-container {
-    display: grid; /* Using grid for more control */
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
-    gap: 2rem; /* Increased gap */
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2.5rem;
 }
 
-/* Game Card Styles */
+/* Game Card */
 .game-card {
-    background-color: #1e293b; /* slate-800 */
-    border-radius: 12px; /* More rounded corners */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    padding: 2rem; /* Increased padding */
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 2.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    backdrop-filter: blur(12px);
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
 }
 
 .game-card:hover {
-    transform: translateY(-8px); /* More pronounced hover effect */
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    transform: translateY(-12px) scale(1.02);
+    border-color: var(--primary-accent);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 20px rgba(0, 242, 255, 0.2);
+}
+
+.game-preview {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+    color: var(--primary-accent);
+    transition: var(--transition-smooth);
+}
+
+.game-card:hover .game-preview {
+    transform: rotate(-5deg) scale(1.1);
+    color: #fff;
+    background: var(--hero-gradient);
+    border-color: transparent;
+    box-shadow: 0 0 30px rgba(112, 0, 255, 0.4);
+}
+
+.game-preview svg {
+    width: 50px;
+    height: 50px;
 }
 
 .game-card h2 {
-    margin-top: 1rem;
-    margin-bottom: 0.75rem; /* Adjusted margin */
-    color: #e2e8f0; /* slate-200 */
-    font-size: 1.9rem; /* Slightly larger */
-    font-weight: 600;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
 .game-card p {
     font-size: 1rem;
-    color: #94a3b8; /* slate-400 */
-    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
     flex-grow: 1;
+    line-height: 1.6;
 }
 
-.game-preview {
-    width: 80px;
-    height: 80px;
-    background-color: #334155; /* slate-700 */
-    border-radius: 12px; /* Match card rounding */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1.5rem; /* Increased margin */
-    color: #22d3ee; /* cyan-400 */
-}
-
-.game-preview svg {
-    width: 48px; 
-    height: 48px; 
-}
-
-
-/* Play Button Styles */
+/* Play Button */
 .play-button {
-    display: inline-block;
-    background-color: #0ea5e9; /* sky-500 */
-    color: #ffffff;
-    padding: 0.85rem 1.8rem; /* Slightly larger padding */
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
     text-decoration: none;
-    border-radius: 8px; /* More rounded */
-    font-weight: 600; /* Bolder text */
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: var(--transition-smooth);
+    display: inline-block;
 }
 
-.play-button:hover {
-    background-color: #0284c7; /* sky-600 */
-    transform: translateY(-2px); /* Slight lift on hover */
+.game-card:hover .play-button {
+    background: var(--primary-accent);
+    color: #000;
+    border-color: var(--primary-accent);
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
 }
 
-/* Footer Styles */
+/* Footer */
 footer {
+    padding: 4rem 2rem;
     text-align: center;
-    padding: 2rem 1rem; /* Increased padding */
-    background-color: #1e293b; /* slate-800 - to match cards */
-    color: #f8f9fa; /* Light text on dark background */
-    margin-top: 3rem; /* Increased margin */
+    border-top: 1px solid var(--card-border);
+    margin-top: 4rem;
+    background: rgba(30, 41, 59, 0.3);
 }
 
 footer p {
-    margin: 0;
-    font-size: 0.95rem; /* Slightly larger */
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
-footer p a {
-    color: #ffffff; /* White color for the link */
-    text-decoration: none; /* Optional: remove underline */
+footer a {
+    color: var(--primary-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition-smooth);
 }
 
-footer p a:hover {
-    text-decoration: underline; /* Optional: add underline on hover */
+footer a:hover {
+    color: #fff;
+    text-shadow: 0 0 10px var(--primary-accent);
 }
 
-/* Responsive adjustments for larger screens */
-/* No changes needed to @media queries for now, grid handles responsiveness well */
-/* @media (min-width: 600px) { ... } */
-/* @media (min-width: 900px) { ... } */
+/* Responsive Grid Adjustments */
+@media (max-width: 768px) {
+    :root {
+        --section-padding: 2rem 1rem;
+    }
+
+    .hero {
+        padding: 4rem 1rem;
+    }
+
+    .game-cards-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .game-card {
+        padding: 2rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.game-card {
+    animation: fadeIn 0.6s ease-out both;
+}
+
+/* Staggered animation for cards */
+.game-card:nth-child(1) { animation-delay: 0.1s; }
+.game-card:nth-child(2) { animation-delay: 0.15s; }
+.game-card:nth-child(3) { animation-delay: 0.2s; }
+.game-card:nth-child(4) { animation-delay: 0.25s; }
+.game-card:nth-child(5) { animation-delay: 0.3s; }
+/* ... and so on for others if needed, but 1-5 gives a good initial flow */
