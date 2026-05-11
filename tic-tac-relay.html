@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Relay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05070a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --neon-cyan: #00f2ff;
+            --neon-purple: #7000ff;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .board-container {
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .board-container.active {
+            opacity: 1;
+            transform: scale(1.05);
+            border: 3px solid var(--neon-cyan) !important;
+            box-shadow: 0 0 40px var(--neon-cyan);
+            background: rgba(30, 41, 59, 0.9);
+            z-index: 10;
+        }
+
+        .board-container.won-x {
+            border: 2px solid rgba(0, 242, 255, 0.3);
+            opacity: 0.7;
+        }
+
+        .board-container.won-o {
+            border: 2px solid rgba(112, 0, 255, 0.3);
+            opacity: 0.7;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #334155;
+            background-color: rgba(15, 23, 42, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .cell:hover {
+            background-color: rgba(51, 65, 85, 0.5);
+        }
+
+        .cell.x {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .cell.o {
+            color: var(--neon-purple);
+            text-shadow: 0 0 10px var(--neon-purple);
+        }
+
+        .cell.fortified {
+            border: 2px solid #fbbf24;
+            box-shadow: inset 0 0 8px #fbbf24;
+            position: relative;
+        }
+
+        .cell.fortified::after {
+            content: '🛡️';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.8rem;
+        }
+
+        .match-score {
+            font-family: 'Monaco', monospace;
+            letter-spacing: 2px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 500px;
+            width: 90%;
+        }
+
+        @media (max-width: 1024px) {
+            .boards-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <div class="max-w-6xl w-full">
+        <h1 class="text-5xl font-extrabold text-center mb-2 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-600">
+            TIC TAC RELAY
+        </h1>
+        <p class="text-center text-slate-400 mb-8">The Ultimate Triple Board Tournament</p>
+
+        <div id="setupArea" class="glass p-8 rounded-2xl mb-8 text-center max-w-md mx-auto">
+            <h2 class="text-2xl font-bold mb-6">Tournament Setup</h2>
+            <div class="flex flex-col space-y-4">
+                <button onclick="setGameMode('2P')" class="bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl font-bold transition transform hover:scale-105">VS LOCAL PLAYER</button>
+                <button onclick="showDifficultySelection()" class="bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold transition transform hover:scale-105">VS COMPUTER AI</button>
+            </div>
+
+            <div id="difficultyOptions" class="hidden mt-6 pt-6 border-t border-slate-700 flex flex-col space-y-3">
+                <button onclick="setGameMode('PvC', 'easy')" class="bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg text-sm font-semibold">EASY (RANDOM)</button>
+                <button onclick="setGameMode('PvC', 'medium')" class="bg-amber-600 hover:bg-amber-500 py-2 rounded-lg text-sm font-semibold">MEDIUM (STRATEGIC)</button>
+                <button onclick="setGameMode('PvC', 'hard')" class="bg-rose-600 hover:bg-rose-600 py-2 rounded-lg text-sm font-semibold">HARD (UNBEATABLE)</button>
+                <button onclick="hideDifficultySelection()" class="text-slate-500 hover:text-slate-300 text-xs">BACK</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div class="flex flex-col items-center mb-8">
+                <div class="match-score text-4xl font-bold flex items-center space-x-6 glass px-8 py-4 rounded-2xl border-b-4 border-cyan-500">
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-slate-400 mb-1">X SCORE</span>
+                        <span id="scoreX" class="text-cyan-400">0</span>
+                    </div>
+                    <div class="text-slate-600">-</div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-slate-400 mb-1">O SCORE</span>
+                        <span id="scoreO" class="text-purple-400">0</span>
+                    </div>
+                </div>
+                <div id="matchStatus" class="mt-4 text-xl font-medium text-slate-300 h-8"></div>
+            </div>
+
+            <div class="boards-wrapper flex justify-center gap-8 mb-8 overflow-x-auto pb-4">
+                <!-- Board 1 -->
+                <div id="board1-container" class="board-container glass p-4 rounded-xl">
+                    <h3 class="text-center font-bold mb-3 text-slate-400">BOARD 1</h3>
+                    <div id="board1" class="grid grid-cols-3 gap-1"></div>
+                    <p class="text-[10px] text-center mt-2 text-slate-500">REWARD: FIRST STRIKE</p>
+                </div>
+
+                <!-- Board 2 -->
+                <div id="board2-container" class="board-container glass p-4 rounded-xl">
+                    <h3 class="text-center font-bold mb-3 text-slate-400">BOARD 2</h3>
+                    <div id="board2" class="grid grid-cols-3 gap-1"></div>
+                    <p class="text-[10px] text-center mt-2 text-slate-500">REWARD: FORTIFY</p>
+                </div>
+
+                <!-- Board 3 -->
+                <div id="board3-container" class="board-container glass p-4 rounded-xl">
+                    <h3 class="text-center font-bold mb-3 text-slate-400">BOARD 3</h3>
+                    <div id="board3" class="grid grid-cols-3 gap-1"></div>
+                    <p class="text-[10px] text-center mt-2 text-slate-500">HAZARD: TELEPORT</p>
+                </div>
+            </div>
+
+            <div class="flex justify-center space-x-4">
+                <button onclick="resetMatch()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg font-semibold transition">RESET MATCH</button>
+                <button onclick="toggleRules()" class="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-semibold transition">RULES</button>
+                <button onclick="location.reload()" class="bg-rose-900 hover:bg-rose-800 px-6 py-2 rounded-lg font-semibold transition text-xs">MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal" onclick="if(event.target === this) toggleRules()">
+        <div class="modal-content glass p-8 rounded-2xl border-2 border-cyan-500">
+            <h2 class="text-3xl font-bold mb-4 text-cyan-400">Tournament Rules</h2>
+            <div class="space-y-4 text-slate-300 text-sm leading-relaxed">
+                <p><strong class="text-white">Format:</strong> Best-of-3 boards. Win 2 boards to win the match.</p>
+                <div class="bg-slate-900/50 p-4 rounded-lg border-l-4 border-purple-500">
+                    <h3 class="text-white font-bold mb-1 italic">POWER-UPS:</h3>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><span class="text-cyan-400 font-semibold">First Strike:</span> The winner of Board 1 gets to place 2 pieces on their first turn of Board 2.</li>
+                        <li><span class="text-purple-400 font-semibold">Fortify:</span> The winner of Board 2 gets to choose one piece on Board 3 to be IMMUNE to teleportation.</li>
+                    </ul>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-lg border-l-4 border-rose-500">
+                    <h3 class="text-white font-bold mb-1 italic">BOARD 3 HAZARD:</h3>
+                    <p>Every 3 turns, a random piece on Board 3 teleports to an empty square, unless it is Fortified!</p>
+                </div>
+            </div>
+            <button onclick="toggleRules()" class="w-full mt-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-lg transition">I'M READY</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * TIC TAC RELAY - JSDoc
+         */
+
+        // Constants
+        const WINNING_COMBINATIONS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        // Match State
+        let gameMode = '2P';
+        let aiDifficulty = 'hard';
+        let matchScore = { X: 0, O: 0 };
+        let activeBoardIndex = 0; // 0, 1, or 2
+        let boards = [
+            Array(9).fill(''),
+            Array(9).fill(''),
+            Array(9).fill('')
+        ];
+        let boardWinners = [null, null, null];
+        let currentPlayer = 'X';
+        let matchActive = true;
+
+        // Power-up States
+        let firstStrikeActive = false;
+        let firstStrikeMovesRemaining = 0;
+        let fortifyUsed = false;
+        let fortifiedCell = -1; // Index on board 3
+        let board3TurnCount = 0;
+
+        /**
+         * Initialize the tournament
+         */
+        function setGameMode(mode, diff = 'hard') {
+            gameMode = mode;
+            aiDifficulty = diff;
+            document.getElementById('setupArea').classList.add('hidden');
+            document.getElementById('gameArea').classList.remove('hidden');
+            resetMatch();
+        }
+
+        function showDifficultySelection() {
+            document.getElementById('difficultyOptions').classList.remove('hidden');
+        }
+
+        function hideDifficultySelection() {
+            document.getElementById('difficultyOptions').classList.add('hidden');
+        }
+
+        function toggleRules() {
+            const modal = document.getElementById('rulesModal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        /**
+         * Reset the entire match
+         */
+        function resetMatch() {
+            matchScore = { X: 0, O: 0 };
+            boards = [Array(9).fill(''), Array(9).fill(''), Array(9).fill('')];
+            boardWinners = [null, null, null];
+            activeBoardIndex = 0;
+            currentPlayer = 'X';
+            matchActive = true;
+            firstStrikeActive = false;
+            firstStrikeMovesRemaining = 0;
+            fortifyUsed = false;
+            fortifiedCell = -1;
+            board3TurnCount = 0;
+
+            updateScoreDisplay();
+            renderAllBoards();
+            updateMatchStatus();
+        }
+
+        /**
+         * Render a specific board
+         * @param {number} boardIdx
+         */
+        function renderBoard(boardIdx) {
+            const boardEl = document.getElementById(`board${boardIdx + 1}`);
+            const container = document.getElementById(`board${boardIdx + 1}-container`);
+
+            boardEl.innerHTML = '';
+
+            // Base classes
+            container.className = 'board-container glass p-4 rounded-xl';
+
+            // Active state
+            if (activeBoardIndex === boardIdx && matchActive) {
+                container.classList.add('active');
+            }
+
+            // Winner state
+            if (boardWinners[boardIdx] === 'X') {
+                container.classList.add('won-x');
+            } else if (boardWinners[boardIdx] === 'O') {
+                container.classList.add('won-o');
+            }
+
+            boards[boardIdx].forEach((cell, cellIdx) => {
+                const cellEl = document.createElement('div');
+                cellEl.className = `cell ${cell.toLowerCase()}`;
+                if (boardIdx === 2 && cellIdx === fortifiedCell) {
+                    cellEl.classList.add('fortified');
+                }
+                cellEl.textContent = cell;
+
+                if (matchActive && activeBoardIndex === boardIdx && cell === '' && boardWinners[boardIdx] === null) {
+                    cellEl.onclick = () => handleCellClick(boardIdx, cellIdx);
+                }
+
+                boardEl.appendChild(cellEl);
+            });
+        }
+
+        function renderAllBoards() {
+            for (let i = 0; i < 3; i++) {
+                renderBoard(i);
+            }
+        }
+
+        /**
+         * Handle move interaction
+         */
+        function handleCellClick(boardIdx, cellIdx) {
+            if (!matchActive || activeBoardIndex !== boardIdx || boards[boardIdx][cellIdx] !== '') return;
+
+            // Handle Fortify Selection logic for Board 3
+            if (activeBoardIndex === 2 && !fortifyUsed && boardWinners[1] !== null) {
+                // If it's the winner of board 2's turn and they haven't fortified yet
+                if (currentPlayer === boardWinners[1]) {
+                    // This is their move, but it also fortifies
+                    makeMove(boardIdx, cellIdx);
+                    fortifiedCell = cellIdx;
+                    fortifyUsed = true;
+                    return;
+                }
+            }
+
+            makeMove(boardIdx, cellIdx);
+        }
+
+        function makeMove(boardIdx, cellIdx) {
+            boards[boardIdx][cellIdx] = currentPlayer;
+
+            // Check for board win
+            const winner = checkWinner(boards[boardIdx]);
+            if (winner) {
+                boardWinners[boardIdx] = winner;
+                matchScore[winner]++;
+                updateScoreDisplay();
+
+                if (matchScore[winner] >= 2) {
+                    endMatch(winner);
+                    return;
+                }
+
+                // Advance to next board
+                activeBoardIndex++;
+                setupNextBoardRewards();
+            } else if (boards[boardIdx].every(c => c !== '')) {
+                // Tie on board
+                boardWinners[boardIdx] = 'TIE';
+                activeBoardIndex++;
+                if (activeBoardIndex > 2) {
+                    // Check match winner by score
+                    if (matchScore.X > matchScore.O) endMatch('X');
+                    else if (matchScore.O > matchScore.X) endMatch('O');
+                    else endMatch('TIE');
+                    return;
+                }
+                setupNextBoardRewards();
+            } else {
+                // Normal turn progression
+                handleTurnEnd(boardIdx);
+            }
+
+            renderAllBoards();
+            updateMatchStatus();
+
+            // Trigger AI if needed
+            if (matchActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(aiMove, 600);
+            }
+        }
+
+        function handleTurnEnd(boardIdx) {
+            if (boardIdx === 2) {
+                board3TurnCount++;
+                if (board3TurnCount % 3 === 0) {
+                    teleportHazard();
+                }
+            }
+
+            if (firstStrikeMovesRemaining > 1) {
+                firstStrikeMovesRemaining--;
+                // Same player stays
+            } else {
+                firstStrikeMovesRemaining = 0;
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            }
+        }
+
+        function setupNextBoardRewards() {
+            currentPlayer = 'X'; // Reset starter for new board? No, let's keep it alternating or winner-based.
+            // Usually Tic Tac Toe starts with X.
+
+            if (activeBoardIndex === 1 && boardWinners[0] && boardWinners[0] !== 'TIE') {
+                // Board 2 starts. Winner of Board 1 gets First Strike.
+                currentPlayer = boardWinners[0];
+                firstStrikeActive = true;
+                firstStrikeMovesRemaining = 2;
+            }
+
+            if (activeBoardIndex === 2 && boardWinners[1] && boardWinners[1] !== 'TIE') {
+                // Board 3 starts.
+                // We'll prompt the winner of board 2 to fortify their first piece.
+            }
+        }
+
+        function teleportHazard() {
+            const board3 = boards[2];
+            const occupied = [];
+            const empty = [];
+
+            board3.forEach((val, idx) => {
+                if (val !== '' && idx !== fortifiedCell) occupied.push(idx);
+                if (val === '') empty.push(idx);
+            });
+
+            if (occupied.length > 0 && empty.length > 0) {
+                const fromIdx = occupied[Math.floor(Math.random() * occupied.length)];
+                const toIdx = empty[Math.floor(Math.random() * empty.length)];
+
+                board3[toIdx] = board3[fromIdx];
+                board3[fromIdx] = '';
+            }
+        }
+
+        function checkWinner(board) {
+            for (let combo of WINNING_COMBINATIONS) {
+                if (board[combo[0]] !== '' &&
+                    board[combo[0]] === board[combo[1]] &&
+                    board[combo[0]] === board[combo[2]]) {
+                    return board[combo[0]];
+                }
+            }
+            return null;
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('scoreX').textContent = matchScore.X;
+            document.getElementById('scoreO').textContent = matchScore.O;
+        }
+
+        function updateMatchStatus() {
+            const statusEl = document.getElementById('matchStatus');
+            if (!matchActive) return;
+
+            if (activeBoardIndex === 2 && !fortifyUsed && boardWinners[1] !== null && boardWinners[1] !== 'TIE') {
+                statusEl.textContent = `${boardWinners[1]} to FORTIFY first piece!`;
+                statusEl.classList.add('animate-pulse');
+                return;
+            }
+            statusEl.classList.remove('animate-pulse');
+
+            if (firstStrikeMovesRemaining > 1) {
+                statusEl.textContent = `${currentPlayer} FIRST STRIKE! (2 Moves)`;
+            } else {
+                statusEl.textContent = `${gameMode === 'PvC' && currentPlayer === 'O' ? 'AI' : 'PLAYER'} ${currentPlayer}'S TURN`;
+            }
+        }
+
+        function endMatch(winner) {
+            matchActive = false;
+            const statusEl = document.getElementById('matchStatus');
+            if (winner === 'TIE') {
+                statusEl.textContent = "MATCH ENDED IN A DRAW!";
+            } else {
+                statusEl.textContent = `PLAYER ${winner} WINS THE TOURNAMENT!`;
+            }
+            renderAllBoards();
+        }
+
+        // --- AI Logic ---
+
+        function aiMove() {
+            if (!matchActive) return;
+
+            const boardIdx = activeBoardIndex;
+            const currentBoard = boards[boardIdx];
+            let bestMove;
+
+            if (aiDifficulty === 'easy') {
+                const available = currentBoard.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+                bestMove = available[Math.floor(Math.random() * available.length)];
+            } else {
+                // Strategic or Minimax
+                bestMove = getBestMove(currentBoard, aiDifficulty === 'hard');
+            }
+
+            if (bestMove !== undefined) {
+                handleCellClick(boardIdx, bestMove);
+            }
+        }
+
+        function getBestMove(board, isHard) {
+            // Priority 1: Win if possible
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWinner(board)) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            // Priority 2: Block player win
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'X';
+                    if (checkWinner(board)) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            if (!isHard) {
+                // Medium strategic moves
+                if (board[4] === '') return 4; // Center
+                const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+                if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+            } else {
+                // Minimax for Unbeatable
+                let bestScore = -Infinity;
+                let move;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        let score = minimax(board, 0, false);
+                        board[i] = '';
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+                return move;
+            }
+
+            // Fallback random
+            const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        const scores = { 'O': 10, 'X': -10, 'TIE': 0 };
+
+        function minimax(board, depth, isMaximizing) {
+            const winner = checkWinner(board);
+            if (winner) return scores[winner] + (isMaximizing ? -depth : depth);
+            if (board.every(c => c !== '')) return 0;
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        bestScore = Math.max(bestScore, minimax(board, depth + 1, false));
+                        board[i] = '';
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        bestScore = Math.min(bestScore, minimax(board, depth + 1, true));
+                        board[i] = '';
+                    }
+                }
+                return bestScore;
+            }
+        }
+    </script>
+</body>
+</html>
