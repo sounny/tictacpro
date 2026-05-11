@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Royale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #05070a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --p1-neon: #00f2ff;
+            --p2-neon: #7000ff;
+            --p3-neon: #39ff14;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #cbd5e1;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .cell:hover {
+            background: rgba(30, 41, 59, 0.8);
+            transform: scale(1.02);
+            z-index: 10;
+        }
+
+        .cell.p1 {
+            color: var(--p1-neon);
+            text-shadow: 0 0 10px var(--p1-neon), 0 0 20px var(--p1-neon);
+        }
+
+        .cell.p2 {
+            color: var(--p2-neon);
+            text-shadow: 0 0 10px var(--p2-neon), 0 0 20px var(--p2-neon);
+        }
+
+        .cell.p3 {
+            color: var(--p3-neon);
+            text-shadow: 0 0 10px var(--p3-neon), 0 0 20px var(--p3-neon);
+        }
+
+        .player-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .player-card.eliminated {
+            opacity: 0.3;
+            filter: grayscale(1);
+            transform: scale(0.9);
+        }
+
+        .active-turn {
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .crown {
+            filter: drop-shadow(0 0 5px #ffd700);
+            animation: crown-pulse 2s infinite;
+        }
+
+        @keyframes crown-pulse {
+            0%, 100% { transform: scale(1) rotate(-5deg); }
+            50% { transform: scale(1.2) rotate(5deg); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .elimination-shake {
+            animation: shake 0.1s ease-in-out infinite;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .btn-neon {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-neon:hover {
+            box-shadow: 0 0 15px currentColor;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Sidebar / Player Info -->
+        <div class="md:col-span-1 space-y-4 order-2 md:order-1">
+            <div class="glass rounded-2xl p-6">
+                <h2 class="text-2xl font-bold mb-4 text-white text-center">Standings</h2>
+                <div id="playerList" class="space-y-3">
+                    <!-- Player Cards -->
+                    <div id="card-P1" class="player-card glass rounded-xl p-4 flex items-center justify-between border-l-4 border-[#00f2ff]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl font-bold text-[#00f2ff]">P1</span>
+                            <div>
+                                <p class="text-sm font-semibold text-white">Player (You)</p>
+                                <p class="text-xs text-slate-400"><span id="count-P1">0</span> pieces</p>
+                            </div>
+                        </div>
+                        <div id="crown-P1" class="hidden">
+                            <svg class="crown w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z"></path></svg>
+                        </div>
+                    </div>
+                    <div id="card-P2" class="player-card glass rounded-xl p-4 flex items-center justify-between border-l-4 border-[#7000ff]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl font-bold text-[#7000ff]">C1</span>
+                            <div>
+                                <p class="text-sm font-semibold text-white">CPU-1</p>
+                                <p class="text-xs text-slate-400"><span id="count-P2">0</span> pieces</p>
+                            </div>
+                        </div>
+                        <div id="crown-P2" class="hidden">
+                            <svg class="crown w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z"></path></svg>
+                        </div>
+                    </div>
+                    <div id="card-P3" class="player-card glass rounded-xl p-4 flex items-center justify-between border-l-4 border-[#39ff14]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl font-bold text-[#39ff14]">C2</span>
+                            <div>
+                                <p class="text-sm font-semibold text-white">CPU-2</p>
+                                <p class="text-xs text-slate-400"><span id="count-P3">0</span> pieces</p>
+                            </div>
+                        </div>
+                        <div id="crown-P3" class="hidden">
+                            <svg class="crown w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z"></path></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 text-center">
+                <p id="roundInfo" class="text-lg font-bold text-white mb-2">Round 1 / 12</p>
+                <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                    <div id="roundProgress" class="bg-indigo-500 h-full transition-all duration-500" style="width: 8.33%"></div>
+                </div>
+                <p id="status" class="mt-4 text-sm font-medium text-slate-300">Your Turn</p>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="showRules" class="flex-1 glass hover:bg-slate-700 text-white py-2 rounded-xl text-sm transition">Rules</button>
+                <button id="resetGame" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-xl text-sm transition shadow-lg shadow-rose-900/20">Reset</button>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="md:col-span-2 order-1 md:order-2">
+            <div class="glass p-4 rounded-3xl">
+                <div id="gameBoard" class="grid grid-cols-6 gap-2 sm:gap-3 aspect-square max-w-[600px] mx-auto">
+                    <!-- 36 cells will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return to Menu -->
+    <div class="mt-8 text-center order-3">
+        <a href="index.html" class="px-6 py-2 glass hover:bg-slate-700 text-white rounded-full transition-all duration-300 inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Return to Menu
+        </a>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="glass max-w-lg w-full p-8 rounded-3xl mx-4">
+            <h2 class="text-3xl font-bold text-white mb-6 text-center">Tic Tac Royale</h2>
+            <div class="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed">
+                <p><span class="text-white font-bold">The Goal:</span> Be the first to get <span class="text-indigo-400 font-bold">4 in a row</span> (horizontal, vertical, or diagonal).</p>
+                <p><span class="text-white font-bold">3 Players:</span> You, CPU-1, and CPU-2 battle it out on a 6x6 grid.</p>
+                <p><span class="text-white font-bold">Elimination:</span> If no one wins after <span class="text-white">12 rounds</span> (36 total moves), the player with the <span class="text-rose-400 font-bold">fewest pieces</span> is eliminated!</p>
+                <p><span class="text-white font-bold">Sudden Death:</span> The remaining two players continue on the same board. If no winner after <span class="text-white">6 more rounds</span>, the player with the <span class="text-emerald-400 font-bold">most pieces</span> wins the match.</p>
+                <p><span class="text-white font-bold">Leader:</span> The current leader is marked with a 👑 crown.</p>
+            </div>
+            <button id="closeRules" class="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition shadow-lg shadow-indigo-900/40">Got it!</button>
+        </div>
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="endModal" class="modal">
+        <div class="glass max-w-sm w-full p-8 rounded-3xl mx-4 text-center">
+            <div id="winnerIcon" class="w-20 h-20 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">👑</div>
+            <h2 id="endTitle" class="text-3xl font-bold text-white mb-2">Victory!</h2>
+            <p id="endMessage" class="text-slate-300 mb-8">You survived the Royale.</p>
+            <button id="playAgain" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl transition shadow-lg shadow-emerald-900/40">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const GRID_SIZE = 6;
+        const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+        const WIN_COUNT = 4;
+        const ELIMINATION_ROUND = 12;
+        const SUDDEN_DEATH_ROUNDS = 6;
+
+        // Player Config
+        const PLAYERS = [
+            { id: 'P1', name: 'Player', symbol: 'X', color: '#00f2ff', isCPU: false, eliminated: false },
+            { id: 'P2', name: 'CPU-1', symbol: 'O', color: '#7000ff', isCPU: true, eliminated: false },
+            { id: 'P3', name: 'CPU-2', symbol: '▲', color: '#39ff14', isCPU: true, eliminated: false }
+        ];
+
+        // Game State
+        let board = Array(TOTAL_CELLS).fill(null);
+        let currentPlayerIndex = 0;
+        let currentRound = 1;
+        let gameActive = true;
+        let phase = 'ROYALE'; // 'ROYALE' or 'SUDDEN_DEATH'
+        let moveCount = 0;
+
+        // DOM Elements
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusText = document.getElementById('status');
+        const roundInfo = document.getElementById('roundInfo');
+        const roundProgress = document.getElementById('roundProgress');
+        const rulesModal = document.getElementById('rulesModal');
+        const showRulesBtn = document.getElementById('showRules');
+        const closeRulesBtn = document.getElementById('closeRules');
+        const endModal = document.getElementById('endModal');
+        const playAgainBtn = document.getElementById('playAgain');
+        const resetBtn = document.getElementById('resetGame');
+        const endTitle = document.getElementById('endTitle');
+        const endMessage = document.getElementById('endMessage');
+        const winnerIcon = document.getElementById('winnerIcon');
+
+        // Initialize
+        function init() {
+            board = Array(TOTAL_CELLS).fill(null);
+            currentPlayerIndex = 0;
+            currentRound = 1;
+            gameActive = true;
+            phase = 'ROYALE';
+            moveCount = 0;
+            PLAYERS.forEach(p => {
+                p.eliminated = false;
+                const card = document.getElementById(`card-${p.id}`);
+                card.classList.remove('eliminated', 'active-turn');
+            });
+            createBoard();
+            updateUI();
+            if (rulesModal.style.display === '') {
+                 // rulesModal.classList.add('active'); // Don't auto show rules every time
+            }
+        }
+
+        function createBoard() {
+            gameBoardElement.innerHTML = '';
+            for (let i = 0; i < TOTAL_CELLS; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell rounded-lg sm:rounded-xl';
+                cell.dataset.index = i;
+                cell.onclick = () => handleCellClick(i);
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive || board[index] !== null || PLAYERS[currentPlayerIndex].isCPU) return;
+            makeMove(index);
+        }
+
+        function makeMove(index) {
+            const player = PLAYERS[currentPlayerIndex];
+            board[index] = player.id;
+            moveCount++;
+
+            const cell = gameBoardElement.children[index];
+            cell.textContent = player.symbol;
+            cell.classList.add(player.id.toLowerCase());
+
+            if (checkWin(index, player.id)) {
+                endGame(player);
+                return;
+            }
+
+            if (moveCount === (phase === 'ROYALE' ? ELIMINATION_ROUND * 3 : (ELIMINATION_ROUND * 3) + (SUDDEN_DEATH_ROUNDS * 2))) {
+                 // Check if we reached end of phase
+            }
+
+            nextTurn();
+        }
+
+        function nextTurn() {
+            let activePlayers = PLAYERS.filter(p => !p.eliminated);
+
+            // Increment round if we cycled through all active players
+            let currentIndexInActive = activePlayers.indexOf(PLAYERS[currentPlayerIndex]);
+            if (currentIndexInActive === activePlayers.length - 1) {
+                currentRound++;
+
+                // Check Phase Transitions
+                if (phase === 'ROYALE' && currentRound > ELIMINATION_ROUND) {
+                    eliminateLowest();
+                    return;
+                }
+                if (phase === 'SUDDEN_DEATH' && currentRound > ELIMINATION_ROUND + SUDDEN_DEATH_ROUNDS) {
+                    declareWinnerByCount();
+                    return;
+                }
+            }
+
+            // Move to next player
+            currentPlayerIndex = (currentPlayerIndex + 1) % PLAYERS.length;
+            while (PLAYERS[currentPlayerIndex].eliminated) {
+                currentPlayerIndex = (currentPlayerIndex + 1) % PLAYERS.length;
+            }
+
+            updateUI();
+
+            if (PLAYERS[currentPlayerIndex].isCPU && gameActive) {
+                setTimeout(cpuMove, 600);
+            }
+        }
+
+        function cpuMove() {
+            if (!gameActive) return;
+            const player = PLAYERS[currentPlayerIndex];
+            const move = getBestMove(player.id);
+            makeMove(move);
+        }
+
+        function getBestMove(playerId) {
+            const availableMoves = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+
+            // 1. Try to win
+            for (let move of availableMoves) {
+                board[move] = playerId;
+                if (checkWin(move, playerId)) {
+                    board[move] = null;
+                    return move;
+                }
+                board[move] = null;
+            }
+
+            // 2. Block others
+            const others = PLAYERS.filter(p => p.id !== playerId && !p.eliminated);
+            for (let opponent of others) {
+                for (let move of availableMoves) {
+                    board[move] = opponent.id;
+                    if (checkWin(move, opponent.id)) {
+                        board[move] = null;
+                        return move;
+                    }
+                    board[move] = null;
+                }
+            }
+
+            // 3. Strategic center
+            const centerMoves = [14, 15, 20, 21].filter(m => board[m] === null);
+            if (centerMoves.length > 0) return centerMoves[Math.floor(Math.random() * centerMoves.length)];
+
+            // 4. Random
+            return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+
+        function checkWin(lastMoveIndex, playerId) {
+            const r = Math.floor(lastMoveIndex / GRID_SIZE);
+            const c = lastMoveIndex % GRID_SIZE;
+
+            const directions = [
+                [0, 1], [1, 0], [1, 1], [1, -1]
+            ];
+
+            for (let [dr, dc] of directions) {
+                let count = 1;
+                // Positive direction
+                for (let i = 1; i < WIN_COUNT; i++) {
+                    const nr = r + dr * i;
+                    const nc = c + dc * i;
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && board[nr * GRID_SIZE + nc] === playerId) {
+                        count++;
+                    } else break;
+                }
+                // Negative direction
+                for (let i = 1; i < WIN_COUNT; i++) {
+                    const nr = r - dr * i;
+                    const nc = c - dc * i;
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && board[nr * GRID_SIZE + nc] === playerId) {
+                        count++;
+                    } else break;
+                }
+                if (count >= WIN_COUNT) return true;
+            }
+            return false;
+        }
+
+        function eliminateLowest() {
+            gameActive = false;
+
+            const counts = PLAYERS.map(p => ({
+                id: p.id,
+                count: board.filter(v => v === p.id).length
+            }));
+
+            counts.sort((a, b) => a.count - b.count);
+
+            // Handle ties for lowest by picking one at random
+            const minCount = counts[0].count;
+            const tiedForLowest = counts.filter(p => p.count === minCount);
+            const eliminatedObj = tiedForLowest[Math.floor(Math.random() * tiedForLowest.length)];
+            const eliminatedId = eliminatedObj.id;
+            const eliminatedPlayer = PLAYERS.find(p => p.id === eliminatedId);
+
+            statusText.textContent = `${eliminatedPlayer.name} eliminated!`;
+
+            // Dramatic Animation
+            gameBoardElement.classList.add('elimination-shake');
+            document.getElementById(`card-${eliminatedId}`).classList.add('elimination-shake');
+
+            setTimeout(() => {
+                gameBoardElement.classList.remove('elimination-shake');
+                document.getElementById(`card-${eliminatedId}`).classList.remove('elimination-shake');
+                document.getElementById(`card-${eliminatedId}`).classList.add('eliminated');
+
+                eliminatedPlayer.eliminated = true;
+
+                // Clear their pieces
+                board = board.map(v => v === eliminatedId ? null : v);
+                Array.from(gameBoardElement.children).forEach((cell, i) => {
+                    if (board[i] === null) {
+                        cell.textContent = '';
+                        cell.classList.remove(eliminatedId.toLowerCase());
+                    }
+                });
+
+                phase = 'SUDDEN_DEATH';
+                gameActive = true;
+                nextTurn();
+            }, 1500);
+        }
+
+        function declareWinnerByCount() {
+            const counts = PLAYERS.filter(p => !p.eliminated).map(p => ({
+                player: p,
+                count: board.filter(v => v === p.id).length
+            }));
+            counts.sort((a, b) => b.count - a.count);
+            endGame(counts[0].player, true);
+        }
+
+        function updateUI() {
+            const activePlayer = PLAYERS[currentPlayerIndex];
+
+            // Update Round Info
+            const maxRounds = phase === 'ROYALE' ? ELIMINATION_ROUND : ELIMINATION_ROUND + SUDDEN_DEATH_ROUNDS;
+            roundInfo.textContent = `Round ${currentRound} / ${maxRounds}`;
+            roundProgress.style.width = `${(currentRound / maxRounds) * 100}%`;
+
+            // Update Status
+            if (activePlayer.isCPU) {
+                statusText.textContent = `${activePlayer.name} is thinking...`;
+            } else {
+                statusText.textContent = "Your Turn";
+            }
+
+            // Update Player Cards
+            PLAYERS.forEach(p => {
+                const card = document.getElementById(`card-${p.id}`);
+                const countText = document.getElementById(`count-${p.id}`);
+                const crown = document.getElementById(`crown-${p.id}`);
+
+                countText.textContent = board.filter(v => v === p.id).length;
+
+                if (p.id === activePlayer.id) {
+                    card.classList.add('active-turn');
+                } else {
+                    card.classList.remove('active-turn');
+                }
+            });
+
+            // Update Crown (Leader)
+            const counts = PLAYERS.map(p => ({
+                id: p.id,
+                count: board.filter(v => v === p.id).length
+            })).filter(p => p.count > 0);
+
+            if (counts.length > 0) {
+                counts.sort((a, b) => b.count - a.count);
+                const leaderId = counts[0].count === (counts[1]?.count || 0) ? null : counts[0].id;
+                PLAYERS.forEach(p => {
+                    document.getElementById(`crown-${p.id}`).classList.toggle('hidden', p.id !== leaderId);
+                });
+            }
+        }
+
+        function endGame(winner, byCount = false) {
+            gameActive = false;
+            endModal.classList.add('active');
+
+            if (winner.id === 'P1') {
+                endTitle.textContent = "Victory!";
+                endMessage.textContent = byCount ? "You had the most pieces in sudden death!" : "You got 4 in a row!";
+                winnerIcon.textContent = "👑";
+                winnerIcon.className = "w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl";
+            } else {
+                endTitle.textContent = "Defeat";
+                endMessage.textContent = `${winner.name} ${byCount ? "dominated the board!" : "got 4 in a row!"}`;
+                winnerIcon.textContent = "💀";
+                winnerIcon.className = "w-20 h-20 bg-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl";
+            }
+        }
+
+        // Event Handlers
+        showRulesBtn.onclick = () => rulesModal.classList.add('active');
+        closeRulesBtn.onclick = () => rulesModal.classList.remove('active');
+        playAgainBtn.onclick = () => {
+            endModal.classList.remove('active');
+            init();
+        };
+        resetBtn.onclick = init;
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
