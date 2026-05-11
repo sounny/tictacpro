@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Shrink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #374151;
+            background-color: #1e293b;
+            transition: all 0.5s ease;
+        }
+        .cell:hover:not(.disabled) {
+            background-color: #334155;
+        }
+        .cell.x { color: #ef4444; }
+        .cell.o { color: #3b82f6; }
+
+        .cell.removed {
+            transform: scale(0);
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            height: 0;
+            margin: 0;
+            border: none;
+        }
+
+        .shrink-indicator {
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 600px) {
+            .cell { width: 50px; height: 50px; font-size: 1.75rem; }
+        }
+        @media (max-width: 400px) {
+            .cell { width: 40px; height: 40px; font-size: 1.5rem; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-700 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">Tic Tac Shrink</h1>
+
+        <div id="gameStatusInfo" class="flex justify-between items-center mb-4 px-2">
+            <div id="moveCountdown" class="text-amber-400 font-bold shrink-indicator">
+                Shrink in: <span id="countdownValue">4</span> moves
+            </div>
+            <div id="boardSizeInfo" class="text-slate-400 text-sm">
+                Size: <span id="currentSizeText">5x5</span>
+            </div>
+        </div>
+
+        <div id="modeSelection" class="mb-6 text-center">
+            <h2 class="text-xl mb-3 text-slate-300">Choose Game Mode:</h2>
+            <div class="flex justify-center space-x-3">
+                <button id="vsPlayer" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">2 Players</button>
+                <button id="vsComputer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">vs Computer</button>
+            </div>
+        </div>
+
+        <div id="difficultySelection" class="mb-6 text-center hidden">
+            <h2 class="text-xl mb-3 text-slate-300">Select Difficulty:</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button id="easyDiff" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Easy</button>
+                <button id="mediumDiff" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Medium</button>
+                <button id="hardDiff" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">Hard</button>
+                <button id="backToMode" class="text-slate-400 hover:text-white mt-2 transition-colors">← Back</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="gameBoard" class="grid grid-cols-5 gap-1 mx-auto bg-slate-700 p-1 rounded-lg shadow-inner transition-all duration-500" style="width: fit-content;">
+                <!-- Cells will be generated here -->
+            </div>
+
+            <p id="status" class="text-xl text-center mt-6 mb-4 h-8 text-slate-300"></p>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                 <button id="resetButton" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Reset</button>
+                 <button id="changeModeButton" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition transform hover:scale-105">Mode</button>
+                 <button id="rulesButton" class="bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition transform hover:scale-105">?</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <p id="modalMessage" class="text-lg mb-4"></p>
+            <button id="modalCloseButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-8 rounded-md transition">OK</button>
+        </div>
+    </div>
+
+    <div id="rulesModal" class="modal">
+        <div class="modal-content text-left">
+            <h2 class="text-2xl font-bold mb-4 text-center">Rules: Tic Tac Shrink</h2>
+            <ul class="list-disc list-inside space-y-2 text-slate-300">
+                <li>Start on a <span class="text-white font-bold">5x5</span> grid.</li>
+                <li>After every <span class="text-amber-400 font-bold">4 moves</span>, the outermost ring is removed!</li>
+                <li>Grid shrinks to 3x3, then finally 1x1.</li>
+                <li>Any pieces on removed cells are <span class="text-red-500 font-bold">destroyed</span>.</li>
+                <li><span class="text-green-400 font-bold">Win:</span> Get 3 in a row on the current board, or be the last player with pieces remaining.</li>
+            </ul>
+            <button id="rulesCloseButton" class="mt-6 w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-8 rounded-md transition">Got it!</button>
+        </div>
+    </div>
+
+    <script>
+        // Constants for board sizes
+        const SIZES = [5, 3, 1];
+        const SHRINK_INTERVAL = 4;
+
+        // DOM
+        const gameBoardElement = document.getElementById('gameBoard');
+        const statusElement = document.getElementById('status');
+        const countdownValue = document.getElementById('countdownValue');
+        const currentSizeText = document.getElementById('currentSizeText');
+        const gameArea = document.getElementById('gameArea');
+        const modeSelection = document.getElementById('modeSelection');
+        const difficultySelection = document.getElementById('difficultySelection');
+
+        // Game State
+        let board = Array(25).fill('');
+        let currentPlayer = 'X';
+        let gameActive = false;
+        let gameMode = ''; // '2P', 'PvC'
+        let difficulty = 'medium';
+        let totalMoves = 0;
+        let currentSizeIndex = 0; // Index into SIZES
+
+        // Active cell indices for each size
+        const activeIndices = {
+            5: Array.from({length: 25}, (_, i) => i),
+            3: [6, 7, 8, 11, 12, 13, 16, 17, 18],
+            1: [12]
+        };
+
+        function getWinningConditions(size) {
+            if (size === 5) {
+                // Actually rule says 3 in a row even on 5x5?
+                // "Win by getting 3 in a row on the current board size"
+                // Let's assume it means 3 in a row on any size.
+                const conditions = [];
+                // Horizontal
+                for (let r = 0; r < 5; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        conditions.push([r*5+c, r*5+c+1, r*5+c+2]);
+                    }
+                }
+                // Vertical
+                for (let c = 0; c < 5; c++) {
+                    for (let r = 0; r < 3; r++) {
+                        conditions.push([r*5+c, (r+1)*5+c, (r+2)*5+c]);
+                    }
+                }
+                // Diagonal
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        conditions.push([r*5+c, (r+1)*5+c+1, (r+2)*5+c+2]);
+                        conditions.push([r*5+c+2, (r+1)*5+c+1, (r+2)*5+c]);
+                    }
+                }
+                return conditions;
+            } else if (size === 3) {
+                const idx = activeIndices[3];
+                return [
+                    [idx[0], idx[1], idx[2]], [idx[3], idx[4], idx[5]], [idx[6], idx[7], idx[8]], // rows
+                    [idx[0], idx[3], idx[6]], [idx[1], idx[4], idx[7]], [idx[2], idx[5], idx[8]], // cols
+                    [idx[0], idx[4], idx[8]], [idx[2], idx[4], idx[6]]  // diags
+                ];
+            }
+            return []; // No 3-in-a-row for 1x1
+        }
+
+        function initBoard() {
+            gameBoardElement.innerHTML = '';
+            gameBoardElement.className = `grid grid-cols-5 gap-1 mx-auto bg-slate-700 p-1 rounded-lg shadow-inner transition-all duration-500`;
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell rounded-md';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleMove(i));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+
+        function render() {
+            const currentSize = SIZES[currentSizeIndex];
+            const currentActive = activeIndices[currentSize];
+
+            Array.from(gameBoardElement.children).forEach((cell, i) => {
+                cell.textContent = board[i];
+                cell.className = 'cell rounded-md';
+                if (board[i] === 'X') cell.classList.add('x');
+                if (board[i] === 'O') cell.classList.add('o');
+
+                if (!currentActive.includes(i)) {
+                    cell.classList.add('removed');
+                }
+            });
+
+            // Adjust grid columns for visual shrinking if we want,
+            // but keeping it 5x5 and scaling cells to 0 might be smoother.
+
+            currentSizeText.textContent = `${currentSize}x${currentSize}`;
+            const movesUntilShrink = SHRINK_INTERVAL - (totalMoves % SHRINK_INTERVAL);
+            countdownValue.textContent = currentSizeIndex < SIZES.length - 1 ? movesUntilShrink : 'MAX';
+
+            if (gameActive) {
+                statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+            }
+        }
+
+        function handleMove(index) {
+            if (!gameActive || board[index] !== '' || !activeIndices[SIZES[currentSizeIndex]].includes(index)) return;
+
+            makeMove(index, currentPlayer);
+        }
+
+        function makeMove(index, player) {
+            board[index] = player;
+            totalMoves++;
+
+            if (checkWin(player)) {
+                endGame(`${player} Wins!`);
+                render();
+                return;
+            }
+
+            if (totalMoves % SHRINK_INTERVAL === 0 && currentSizeIndex < SIZES.length - 1) {
+                shrinkBoard();
+                if (!gameActive) {
+                    render();
+                    return;
+                }
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+            if (board.every((cell, i) => !activeIndices[SIZES[currentSizeIndex]].includes(i) || cell !== '')) {
+                endGame("It's a Tie!");
+            }
+
+            render();
+
+            if (gameActive && gameMode === 'PvC' && currentPlayer === 'O') {
+                setTimeout(computerMove, 600);
+            }
+        }
+
+        function shrinkBoard() {
+            currentSizeIndex++;
+            const newSize = SIZES[currentSizeIndex];
+            const newActive = activeIndices[newSize];
+
+            // Destroy pieces outside
+            board = board.map((val, i) => newActive.includes(i) ? val : '');
+
+            // Check if someone lost all pieces and other has some
+            const xPieces = board.filter(v => v === 'X').length;
+            const oPieces = board.filter(v => v === 'O').length;
+
+            if (xPieces === 0 && oPieces === 0) {
+                endGame("It's a Tie! (All pieces destroyed)");
+            } else if (xPieces === 0 && oPieces > 0) {
+                endGame("O Wins! (X pieces destroyed)");
+            } else if (oPieces === 0 && xPieces > 0) {
+                endGame("X Wins! (O pieces destroyed)");
+            } else if (newSize === 1) {
+                if (board[12] === 'X') endGame("X Wins!");
+                else if (board[12] === 'O') endGame("O Wins!");
+            }
+        }
+
+        function checkWin(player) {
+            const conditions = getWinningConditions(SIZES[currentSizeIndex]);
+            return conditions.some(cond => cond.every(idx => board[idx] === player));
+        }
+
+        function endGame(msg) {
+            gameActive = false;
+            statusElement.textContent = msg;
+            showModal(msg);
+        }
+
+        // --- Modals ---
+        const messageModal = document.getElementById('messageModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+        const rulesModal = document.getElementById('rulesModal');
+        const rulesButton = document.getElementById('rulesButton');
+        const rulesCloseButton = document.getElementById('rulesCloseButton');
+
+        function showModal(msg) {
+            modalMessage.textContent = msg;
+            messageModal.style.display = 'flex';
+        }
+        modalCloseButton.onclick = () => messageModal.style.display = 'none';
+        rulesButton.onclick = () => rulesModal.style.display = 'flex';
+        rulesCloseButton.onclick = () => rulesModal.style.display = 'none';
+
+        // --- AI ---
+        function computerMove() {
+            if (!gameActive) return;
+            const currentActive = activeIndices[SIZES[currentSizeIndex]];
+            const available = currentActive.filter(i => board[i] === '');
+            if (available.length === 0) return;
+
+            let choice;
+            if (difficulty === 'easy') {
+                choice = available[Math.floor(Math.random() * available.length)];
+            } else {
+                // Strategic: try win, block, then prefer center-ish
+                choice = findBestMove('O', 'X');
+            }
+            makeMove(choice, 'O');
+        }
+
+        function findBestMove(me, them) {
+            const currentSize = SIZES[currentSizeIndex];
+            const currentActive = activeIndices[currentSize];
+            const available = currentActive.filter(i => board[i] === '');
+
+            const movesUntilShrink = SHRINK_INTERVAL - (totalMoves % SHRINK_INTERVAL);
+            const willShrinkSoon = movesUntilShrink <= 1 && currentSizeIndex < SIZES.length - 1;
+
+            let filteredAvailable = available;
+            if (willShrinkSoon && difficulty === 'hard') {
+                // Try to avoid the outer ring if it's about to shrink
+                const nextSize = SIZES[currentSizeIndex + 1];
+                const nextActive = activeIndices[nextSize];
+                const safeMoves = available.filter(i => nextActive.includes(i));
+                if (safeMoves.length > 0) {
+                    filteredAvailable = safeMoves;
+                }
+            }
+
+            // 1. Win
+            for (let move of available) {
+                board[move] = me;
+                if (checkWin(me)) { board[move] = ''; return move; }
+                board[move] = '';
+            }
+            // 2. Block
+            for (let move of available) {
+                board[move] = them;
+                if (checkWin(them)) { board[move] = ''; return move; }
+                board[move] = '';
+            }
+
+            // 3. Prefer strategic positions
+            if (difficulty !== 'easy') {
+                const center = 12;
+                if (filteredAvailable.includes(center)) return center;
+
+                // If on 5x5, prefer the 3x3 area
+                if (currentSize === 5) {
+                    const inner3x3 = activeIndices[3].filter(i => filteredAvailable.includes(i));
+                    if (inner3x3.length > 0) return inner3x3[Math.floor(Math.random() * inner3x3.length)];
+                }
+            }
+
+            return filteredAvailable[Math.floor(Math.random() * filteredAvailable.length)];
+        }
+
+        // --- Menu ---
+        document.getElementById('vsPlayer').onclick = () => start('2P');
+        document.getElementById('vsComputer').onclick = () => {
+            modeSelection.classList.add('hidden');
+            difficultySelection.classList.remove('hidden');
+        };
+        document.getElementById('backToMode').onclick = () => {
+            difficultySelection.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+        };
+        document.getElementById('easyDiff').onclick = () => start('PvC', 'easy');
+        document.getElementById('mediumDiff').onclick = () => start('PvC', 'medium');
+        document.getElementById('hardDiff').onclick = () => start('PvC', 'hard');
+
+        function start(mode, diff) {
+            gameMode = mode;
+            difficulty = diff || 'medium';
+            modeSelection.classList.add('hidden');
+            difficultySelection.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            reset();
+        }
+
+        function reset() {
+            board = Array(25).fill('');
+            currentPlayer = 'X';
+            totalMoves = 0;
+            currentSizeIndex = 0;
+            gameActive = true;
+            initBoard();
+            render();
+        }
+
+        document.getElementById('resetButton').onclick = reset;
+        document.getElementById('changeModeButton').onclick = () => {
+            gameArea.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+        };
+
+        initBoard();
+    </script>
+    <div class="mt-6 text-center">
+        <a href="index.html" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">Return to Menu</a>
+    </div>
+</body>
+</html>
