@@ -20,6 +20,7 @@
   "homepage": "https://github.com/sounny/tictacpro#readme",
   "devDependencies": {
     "canvas": "^3.2.3",
+    "chai": "^6.2.2",
     "jsdom": "^29.1.1",
     "mocha": "^11.7.5"
   }
